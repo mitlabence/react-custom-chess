@@ -1,52 +1,93 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Tile from "../Tile/Tile";
 import "./Chessboard.css";
+import Referee from "../../Referee/Referee";
 
 const verticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
 const horizontalAxis = ["a", "b", "c", "d", "e", "f", "g", "h"];
+
+export enum PieceType {
+  PAWN = "pawn",
+  ROOK = "rook",
+  KNIGHT = "knight",
+  BISHOP = "bishop",
+  QUEEN = "queen",
+  KING = "king",
+}
+
+export enum TeamType {
+  WHITE = "white",
+  BLACK = "black",
+}
 
 interface Piece {
   image: string;
   y: number;
   x: number;
+  type: PieceType;
+  team: TeamType;
 }
 
 // add pawns
 const pawnsConfig = [
-  "pawn",
-  "pawn",
-  "pawn",
-  "pawn",
-  "pawn",
-  "pawn",
-  "pawn",
-  "pawn",
+  PieceType.PAWN,
+  PieceType.PAWN,
+  PieceType.PAWN,
+  PieceType.PAWN,
+  PieceType.PAWN,
+  PieceType.PAWN,
+  PieceType.PAWN,
+  PieceType.PAWN,
 ];
 // add pieces, left to right:
 //  rook, knight, bishop, queen, king, bishop, knight, rook
 const piecesConfig = [
-  "rook",
-  "knight",
-  "bishop",
-  "queen",
-  "king",
-  "bishop",
-  "knight",
-  "rook",
-];
+  PieceType.ROOK,
+  PieceType.KNIGHT,
+  PieceType.BISHOP,
+  PieceType.QUEEN,
+  PieceType.KING,
+  PieceType.BISHOP,
+  PieceType.KNIGHT,
+  PieceType.ROOK,
+]; // TODO: can make it more compact than specifying basically same information twice? piecesConfig and pieceTypesConfig
 
 const initialBoardState: Piece[] = [];
 for (let i = 0; i < 8; i++) {
   // white
-  let image_path_white_piece = `assets/images/white_${piecesConfig[i]}.png`;
-  initialBoardState.push({ image: image_path_white_piece, x: i, y: 0 });
-  let image_path_white_pawn = `assets/images/white_${pawnsConfig[i]}.png`;
-  initialBoardState.push({ image: image_path_white_pawn, x: i, y: 1 });
+  let image_path_white_piece = `assets/images/${TeamType.WHITE}_${piecesConfig[i]}.png`;
+  initialBoardState.push({
+    image: image_path_white_piece,
+    x: i,
+    y: 0,
+    type: piecesConfig[i],
+    team: TeamType.WHITE,
+  });
+  let image_path_white_pawn = `assets/images/${TeamType.WHITE}_${pawnsConfig[i]}.png`;
+  initialBoardState.push({
+    image: image_path_white_pawn,
+    x: i,
+    y: 1,
+    type: PieceType.PAWN,
+    team: TeamType.WHITE,
+  });
   // black
-  let image_path_black_piece = `assets/images/black_${piecesConfig[i]}.png`;
-  initialBoardState.push({ image: image_path_black_piece, x: i, y: 7 });
-  let image_path_black_pawn = `assets/images/black_${pawnsConfig[i]}.png`;
-  initialBoardState.push({ image: image_path_black_pawn, x: i, y: 6 });
+  let image_path_black_piece = `assets/images/${TeamType.BLACK}_${piecesConfig[i]}.png`;
+  initialBoardState.push({
+    image: image_path_black_piece,
+    x: i,
+    y: 7,
+    type: piecesConfig[i],
+    team: TeamType.BLACK,
+  });
+  let image_path_black_pawn = `assets/images/${TeamType.BLACK}_${pawnsConfig[i]}.png`;
+  initialBoardState.push({
+    image: image_path_black_pawn,
+    x: i,
+    y: 6,
+    type: PieceType.PAWN,
+    team: TeamType.BLACK,
+  });
 }
 
 export default function Chessboard() {
@@ -57,15 +98,16 @@ export default function Chessboard() {
   const chessBoardRef = useRef<HTMLDivElement>(null);
   const [pieces, setPieces] = useState<Piece[]>(initialBoardState);
 
-  let board = [];
+  const referee = new Referee();
 
+  let board = [];
 
   function grabPiece(e: React.MouseEvent) {
     const element = e.target as HTMLElement;
     const chessboard = chessBoardRef.current;
     if (element.classList.contains("chess-piece") && chessboard) {
       setGridX(Math.floor((e.clientX - chessboard.offsetLeft) / 100));
-      setGridY(Math.floor((800 - e.clientY + chessboard.offsetTop) / 100));  // TODO: set proper chessboard size
+      setGridY(Math.floor((800 - e.clientY + chessboard.offsetTop) / 100)); // TODO: set proper chessboard size
       // only interact with chess pieces
       const x = e.clientX - 50; // TODO: extract offset
       const y = e.clientY - 50;
@@ -113,11 +155,29 @@ export default function Chessboard() {
     if (activePiece && chessboard) {
       const x = Math.floor((e.clientX - chessboard.offsetLeft) / 100);
       const y = Math.floor((800 - e.clientY + chessboard.offsetTop) / 100); // TODO: set proper chessboard size
+      // Check if move is valid
+
+      // Update piece positions
       setPieces((value) => {
         const pieces = value.map((p) => {
           if (p.x === gridX && p.y === gridY) {
-            p.x = x;
-            p.y = y;
+            const validMove = referee.isVaLidMove(
+              gridX,
+              gridY,
+              x,
+              y,
+              p.type,
+              p.team
+            );
+            if (validMove) {
+              p.x = x;
+              p.y = y;
+            } else {
+              // reset piece location
+              activePiece.style.position = "relative";
+              activePiece.style.removeProperty("top");
+              activePiece.style.removeProperty("left");
+            }
           }
           return p;
         });
