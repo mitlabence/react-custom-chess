@@ -20,7 +20,7 @@ export enum TeamType {
   BLACK = "black",
 }
 
-interface Piece {
+export interface Piece {
   image: string;
   y: number;
   x: number;
@@ -167,7 +167,8 @@ export default function Chessboard() {
               x,
               y,
               p.type,
-              p.team
+              p.team,
+              value
             );
             if (validMove) {
               p.x = x;
