@@ -20,14 +20,21 @@ export enum PieceColor {
   BLACK = "black",
 }
 
-export class ChessMove{
-  pieceType: PieceType; 
-  pieceColor: PieceColor; 
-  sourceX: number; 
-  sourceY: number; 
-  targetX: number;  
+export class ChessMove {
+  pieceType: PieceType;
+  pieceColor: PieceColor;
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
   targetY: number;
-  constructor(pieceType: PieceType, pieceColor: PieceColor, sourceX: number, sourceY: number, targetX: number,  targetY: number){
+  constructor(
+    pieceType: PieceType,
+    pieceColor: PieceColor,
+    sourceX: number,
+    sourceY: number,
+    targetX: number,
+    targetY: number
+  ) {
     this.pieceType = pieceType;
     this.pieceColor = pieceColor;
     this.sourceX = sourceX;
@@ -37,7 +44,7 @@ export class ChessMove{
   }
 }
 
-export class BoardState{
+export class BoardState {
   pieces: Piece[];
   moveHistory: ChessMove[];
   constructor(pieces: Piece[], moveHistory: ChessMove[]) {
@@ -45,7 +52,6 @@ export class BoardState{
     this.moveHistory = moveHistory;
   }
 }
-
 
 export interface Piece {
   image: string;
@@ -117,7 +123,7 @@ for (let i = 0; i < 8; i++) {
   });
 }
 
-const initialMoveHistory: ChessMove[] = []; 
+const initialMoveHistory: ChessMove[] = [];
 
 export default function Chessboard() {
   const [sourceX, setGridX] = useState(0);
@@ -125,7 +131,9 @@ export default function Chessboard() {
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
 
   const chessBoardRef = useRef<HTMLDivElement>(null);
-  const [boardState, setBoardState] = useState<BoardState>(new BoardState(initialPieces, initialMoveHistory));
+  const [boardState, setBoardState] = useState<BoardState>(
+    new BoardState(initialPieces, initialMoveHistory)
+  );
 
   const referee = new Referee();
 
@@ -215,7 +223,7 @@ export default function Chessboard() {
           boardState
         );
 
-        if (validMove) {
+        if (validMove || isEnPassantMove) {
           // Add move to move history
           const newMove: ChessMove = new ChessMove(
             currentPiece.type,
@@ -226,20 +234,35 @@ export default function Chessboard() {
             targetY
           );
           // Update pieces on the board
+          // One piece is moved (as it is a valid move); up to one piece might be captured
+          // Initially, set the coordinates of a potentially captured piece
+          let captureX = targetX;
+          let captureY = targetY;
+          if (isEnPassantMove) {
+            // Define what is one tile "in front" of moving piece
+            const forwardDirection =
+              currentPiece.color === PieceColor.WHITE ? +1 : -1;
+            // For en passant, the captured piece is actually not at the coordinates where the moved piece ends up,
+            // but one behind
+            captureY = captureY - forwardDirection;
+          }
           const newPieces = boardState.pieces.reduce((results, piece) => {
             if (piece.x === sourceX && piece.y === sourceY) {
               // if no deep copy of pieces were made, we would need piece.team === currentPiece.team as well
               piece.x = targetX;
               piece.y = targetY;
               results.push(piece);
-            } else if (!(piece.x === targetX && piece.y === targetY)) {
+            } else if (!(piece.x === captureX && piece.y === captureY)) {
               // move all pieces but the one attacked (which could be non-existent, so cannot check it explicitly)
               results.push(piece);
             }
             return results;
           }, [] as Piece[]);
           // Update pieces and move history
-          const newBoardState: BoardState = new BoardState(newPieces, [...boardState.moveHistory, newMove]);
+          const newBoardState: BoardState = new BoardState(newPieces, [
+            ...boardState.moveHistory,
+            newMove,
+          ]);
           setBoardState(newBoardState);
         } else {
           // reset piece location

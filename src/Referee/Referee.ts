@@ -31,27 +31,59 @@ export default class Referee {
     }
   }
 
-  moveIsEnPassant(sourceX: number, sourceY: number, targetX: number, targetY: number, pieceType: PieceType, pieceColor: PieceColor, boardState: BoardState): boolean {
+  moveIsEnPassant(
+    sourceX: number,
+    sourceY: number,
+    targetX: number,
+    targetY: number,
+    movingPieceType: PieceType,
+    movingPieceColor: PieceColor,
+    boardState: BoardState
+  ): boolean {
     // Given a source and target (x, y) coordinate, check if the
-    // piece with pieceType and pieceColor is making a move that is a legal en passant capture. 
-    if(pieceType !== PieceType.PAWN) { // only a pawn can en passant capture
+    // piece with pieceType and pieceColor is making a move that is a legal en passant capture.
+    if (movingPieceType !== PieceType.PAWN) {
+      // only a pawn can en passant capture
       return false;
     }
-    // The number of horizontal moves 
+    // moveHistory should not be empty (en passant depends on previous move)
+    if (boardState.moveHistory.length < 1) {
+      return false;
+    }
+    // The number of horizontal moves
     const deltaX = Math.abs(targetX - sourceX);
     // forward is dependent on color! Should be positive if moving forward, negative if backward
-    const deltaForward = pieceColor === PieceColor.WHITE ? targetY - sourceY : sourceY - targetY;
-    if(!(deltaX === 1 && deltaForward === 1)) { // Pawn capture move => has to have 1 unit horizontal movement and 1 unit forward
+    const deltaForward =
+      movingPieceColor === PieceColor.WHITE
+        ? targetY - sourceY
+        : sourceY - targetY;
+    if (!(deltaX === 1 && deltaForward === 1)) {
+      // Pawn capture move => has to have 1 unit horizontal movement and 1 unit forward
       return false;
     }
 
-    // A pawn makes a capture-like movement. Need to check:
-    // 1. if there is a pawn P_t at (targetX, sourceY)
-    // 2. if the P_t has opposite color
-    // 3. if the pawn P_t just made a first move of double squares
-
-
-    return false;
+    // Up to this point, we made sure that a pawn makes a capture-like movement. Need to check:
+    // 1. if there is a pawn P at (targetX, sourceY). This pawn would be captured.
+    // 2. if the P has opposite color
+    const pieceToCapture = boardState.pieces.find(
+      (p) => p.x === targetX && p.y === sourceY && p.color !== movingPieceColor
+    );
+    if (!pieceToCapture) {
+      // No piece to be captured is found
+      return false;
+    }
+    // 3. if the pawn P just made a first move of double squares.
+    //  It is enough to show that the previous move (two moves forward by P) ends up at same Y where attacking pawn is originally,
+    //  and the x of P is where the attacking pawn ends up
+    const previousMove = boardState.moveHistory[boardState.moveHistory.length - 1];
+    if (!(previousMove.targetY === sourceY && previousMove.sourceX === targetX)) {
+      return false;
+    }
+    // 4. if we end up on third rank of enemy. Equivalent: if P has just moved 2 along Y axis.
+    if(!(Math.abs(previousMove.targetY - previousMove.targetX)===2)){
+      return false;
+    }
+    return true;
   }
 
   isVaLidMove(
@@ -99,7 +131,9 @@ export default class Referee {
           if (this.tileIsOccupied(targetX, targetY, pieces)) {
             // TODO: check if opposite color!
             const oppositeColor =
-              pieceColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+              pieceColor === PieceColor.WHITE
+                ? PieceColor.BLACK
+                : PieceColor.WHITE;
             return this.tileIsOccupiedBy(
               targetX,
               targetY,
