@@ -91,8 +91,8 @@ for (let i = 0; i < 8; i++) {
 }
 
 export default function Chessboard() {
-  const [gridX, setGridX] = useState(0);
-  const [gridY, setGridY] = useState(0);
+  const [sourceX, setGridX] = useState(0);
+  const [sourceY, setGridY] = useState(0);
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
 
   const chessBoardRef = useRef<HTMLDivElement>(null);
@@ -153,45 +153,43 @@ export default function Chessboard() {
     console.log(e);
     const chessboard = chessBoardRef.current;
     if (activePiece && chessboard) {
-      const x = Math.floor((e.clientX - chessboard.offsetLeft) / 100);
-      const y = Math.floor((800 - e.clientY + chessboard.offsetTop) / 100); // TODO: set proper chessboard size
+      const targetX = Math.floor((e.clientX - chessboard.offsetLeft) / 100);
+      const targetY = Math.floor(
+        (800 - e.clientY + chessboard.offsetTop) / 100
+      ); // TODO: set proper chessboard size
       // Check if move is valid
 
-      const currentPiece = pieces.find((p) => p.x === gridX && p.y === gridY);
+      const currentPiece = pieces.find(
+        (p) => p.x === sourceX && p.y === sourceY
+      );
       //const attackedPiece = pieces.find((p) => p.x === x && p.y === y);
-
-      // FIXME: "pieces" is being changed during reduce(), and currentPiece is linked to
-      // change current dropped piece position... So currentPiece might be found twice, and it leads to
-      // the currentPiece disappearing in some cases. One way is to deep copy (piecesCopy) the array,
-      // the other is to check for team (color)
-      let piecesCopy: Array<Piece> = JSON.parse(JSON.stringify(pieces));  
 
       // Update piece positions
       if (currentPiece) {
         const validMove = referee.isVaLidMove(
-          gridX,
-          gridY,
-          x,
-          y,
+          sourceX,
+          sourceY,
+          targetX,
+          targetY,
           currentPiece.type,
           currentPiece.team,
           pieces
         );
         if (validMove) {
-          const newPieces = piecesCopy.reduce((results, piece) => {
-            if (piece.x === currentPiece.x && piece.y === currentPiece.y) { // if no deep copy of pieces were made, we would need piece.team === currentPiece.team as well
-              piece.x = x;
-              piece.y = y;
+          const newPieces = pieces.reduce((results, piece) => {
+            if (piece.x === sourceX && piece.y === sourceY) {
+              // if no deep copy of pieces were made, we would need piece.team === currentPiece.team as well
+              piece.x = targetX;
+              piece.y = targetY;
               results.push(piece);
-            } else if (!(piece.x === x && piece.y === y)) {
-              // move all pieces but the one attacked (which could be non-existent => use fact that coordinates coincide with moved piece)
+            } else if (!(piece.x === targetX && piece.y === targetY)) {
+              // move all pieces but the one attacked (which could be non-existent, so cannot check it explicitly)
               results.push(piece);
             }
             return results;
           }, [] as Piece[]);
 
           setPieces(newPieces);
-          console.log(`${newPieces.length} total pieces`);
         } else {
           // reset piece location
           activePiece.style.position = "relative";
