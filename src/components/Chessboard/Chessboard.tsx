@@ -15,17 +15,44 @@ export enum PieceType {
   KING = "king",
 }
 
-export enum TeamType {
+export enum PieceColor {
   WHITE = "white",
   BLACK = "black",
 }
+
+export class ChessMove{
+  pieceType: PieceType; 
+  pieceColor: PieceColor; 
+  sourceX: number; 
+  sourceY: number; 
+  targetX: number;  
+  targetY: number;
+  constructor(pieceType: PieceType, pieceColor: PieceColor, sourceX: number, sourceY: number, targetX: number,  targetY: number){
+    this.pieceType = pieceType;
+    this.pieceColor = pieceColor;
+    this.sourceX = sourceX;
+    this.sourceY = sourceY;
+    this.targetX = targetX;
+    this.targetY = targetY;
+  }
+}
+
+export class BoardState{
+  pieces: Piece[];
+  moveHistory: ChessMove[];
+  constructor(pieces: Piece[], moveHistory: ChessMove[]) {
+    this.pieces = pieces;
+    this.moveHistory = moveHistory;
+  }
+}
+
 
 export interface Piece {
   image: string;
   y: number;
   x: number;
   type: PieceType;
-  team: TeamType;
+  color: PieceColor;
 }
 
 // add pawns
@@ -52,43 +79,45 @@ const piecesConfig = [
   PieceType.ROOK,
 ]; // TODO: can make it more compact than specifying basically same information twice? piecesConfig and pieceTypesConfig
 
-const initialBoardState: Piece[] = [];
+const initialPieces: Piece[] = [];
 for (let i = 0; i < 8; i++) {
   // white
-  let image_path_white_piece = `assets/images/${TeamType.WHITE}_${piecesConfig[i]}.png`;
-  initialBoardState.push({
+  let image_path_white_piece = `assets/images/${PieceColor.WHITE}_${piecesConfig[i]}.png`;
+  initialPieces.push({
     image: image_path_white_piece,
     x: i,
     y: 0,
     type: piecesConfig[i],
-    team: TeamType.WHITE,
+    color: PieceColor.WHITE,
   });
-  let image_path_white_pawn = `assets/images/${TeamType.WHITE}_${pawnsConfig[i]}.png`;
-  initialBoardState.push({
+  let image_path_white_pawn = `assets/images/${PieceColor.WHITE}_${pawnsConfig[i]}.png`;
+  initialPieces.push({
     image: image_path_white_pawn,
     x: i,
     y: 1,
     type: PieceType.PAWN,
-    team: TeamType.WHITE,
+    color: PieceColor.WHITE,
   });
   // black
-  let image_path_black_piece = `assets/images/${TeamType.BLACK}_${piecesConfig[i]}.png`;
-  initialBoardState.push({
+  let image_path_black_piece = `assets/images/${PieceColor.BLACK}_${piecesConfig[i]}.png`;
+  initialPieces.push({
     image: image_path_black_piece,
     x: i,
     y: 7,
     type: piecesConfig[i],
-    team: TeamType.BLACK,
+    color: PieceColor.BLACK,
   });
-  let image_path_black_pawn = `assets/images/${TeamType.BLACK}_${pawnsConfig[i]}.png`;
-  initialBoardState.push({
+  let image_path_black_pawn = `assets/images/${PieceColor.BLACK}_${pawnsConfig[i]}.png`;
+  initialPieces.push({
     image: image_path_black_pawn,
     x: i,
     y: 6,
     type: PieceType.PAWN,
-    team: TeamType.BLACK,
+    color: PieceColor.BLACK,
   });
 }
+
+const initialMoveHistory: ChessMove[] = []; 
 
 export default function Chessboard() {
   const [sourceX, setGridX] = useState(0);
@@ -96,7 +125,7 @@ export default function Chessboard() {
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
 
   const chessBoardRef = useRef<HTMLDivElement>(null);
-  const [pieces, setPieces] = useState<Piece[]>(initialBoardState);
+  const [boardState, setBoardState] = useState<BoardState>(new BoardState(initialPieces, initialMoveHistory));
 
   const referee = new Referee();
 
@@ -159,7 +188,7 @@ export default function Chessboard() {
       ); // TODO: set proper chessboard size
       // Check if move is valid
 
-      const currentPiece = pieces.find(
+      const currentPiece = boardState.pieces.find(
         (p) => p.x === sourceX && p.y === sourceY
       );
       //const attackedPiece = pieces.find((p) => p.x === x && p.y === y);
@@ -172,11 +201,32 @@ export default function Chessboard() {
           targetX,
           targetY,
           currentPiece.type,
-          currentPiece.team,
-          pieces
+          currentPiece.color,
+          boardState
         );
+
+        const isEnPassantMove = referee.moveIsEnPassant(
+          sourceX,
+          sourceY,
+          targetX,
+          targetY,
+          currentPiece.type,
+          currentPiece.color,
+          boardState
+        );
+
         if (validMove) {
-          const newPieces = pieces.reduce((results, piece) => {
+          // Add move to move history
+          const newMove: ChessMove = new ChessMove(
+            currentPiece.type,
+            currentPiece.color,
+            sourceX,
+            sourceY,
+            targetX,
+            targetY
+          );
+          // Update pieces on the board
+          const newPieces = boardState.pieces.reduce((results, piece) => {
             if (piece.x === sourceX && piece.y === sourceY) {
               // if no deep copy of pieces were made, we would need piece.team === currentPiece.team as well
               piece.x = targetX;
@@ -188,8 +238,9 @@ export default function Chessboard() {
             }
             return results;
           }, [] as Piece[]);
-
-          setPieces(newPieces);
+          // Update pieces and move history
+          const newBoardState: BoardState = new BoardState(newPieces, [...boardState.moveHistory, newMove]);
+          setBoardState(newBoardState);
         } else {
           // reset piece location
           activePiece.style.position = "relative";
@@ -207,7 +258,7 @@ export default function Chessboard() {
       const number = j + i;
       let image = undefined;
 
-      pieces.forEach((p) => {
+      boardState.pieces.forEach((p) => {
         if (p.x === i && p.y === j) {
           image = p.image;
         }
