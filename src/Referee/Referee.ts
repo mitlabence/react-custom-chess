@@ -13,6 +13,22 @@ export default class Referee {
       return false;
     }
   }
+  tileIsOccupiedBy(
+    x: number,
+    y: number,
+    boardState: Piece[],
+    team: TeamType
+  ): boolean {
+    /// Given a color (team), check if (x,y) is occupied by a piece that belongs to that color.
+    const piece = boardState.find(
+      (p) => p.x === x && p.y === y && p.team === team
+    );
+    if (piece) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   isVaLidMove(
     sourceX: number,
@@ -57,7 +73,14 @@ export default class Referee {
         } else if (deltaX === 1) {
           if (this.tileIsOccupied(targetX, targetY, boardState)) {
             // TODO: check if opposite color!
-            return true;
+            const oppositeColor =
+              pieceColor === TeamType.WHITE ? TeamType.BLACK : TeamType.WHITE;
+            return this.tileIsOccupiedBy(
+              targetX,
+              targetY,
+              boardState,
+              oppositeColor
+            );
           }
         }
       }
