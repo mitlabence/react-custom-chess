@@ -286,6 +286,16 @@ export default class Referee {
         boardState,
         pieceColor
       );
+    } else if (pieceType === PieceType.KING) {
+      if (Math.abs(deltaForward) <= 1 && deltaXAbs <= 1) {
+        return this.canMoveStraightTo(
+          sourcePosition,
+          targetPosition,
+          boardState,
+          pieceColor
+        );
+      }
+      return false;
     }
     return false;
   }
