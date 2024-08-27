@@ -2,137 +2,29 @@ import { useRef, useState } from "react";
 import Tile from "../Tile/Tile";
 import "./Chessboard.css";
 import Referee from "../../Referee/Referee";
-
-const verticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
-const horizontalAxis = ["a", "b", "c", "d", "e", "f", "g", "h"];
-
-export enum PieceType {
-  PAWN = "pawn",
-  ROOK = "rook",
-  KNIGHT = "knight",
-  BISHOP = "bishop",
-  QUEEN = "queen",
-  KING = "king",
-}
-
-export enum PieceColor {
-  WHITE = "white",
-  BLACK = "black",
-}
-
-export class ChessMove {
-  pieceType: PieceType;
-  pieceColor: PieceColor;
-  sourceX: number;
-  sourceY: number;
-  targetX: number;
-  targetY: number;
-  constructor(
-    pieceType: PieceType,
-    pieceColor: PieceColor,
-    sourceX: number,
-    sourceY: number,
-    targetX: number,
-    targetY: number
-  ) {
-    this.pieceType = pieceType;
-    this.pieceColor = pieceColor;
-    this.sourceX = sourceX;
-    this.sourceY = sourceY;
-    this.targetX = targetX;
-    this.targetY = targetY;
-  }
-}
-
-export class BoardState {
-  pieces: Piece[];
-  moveHistory: ChessMove[];
-  constructor(pieces: Piece[], moveHistory: ChessMove[]) {
-    this.pieces = pieces;
-    this.moveHistory = moveHistory;
-  }
-}
-
-export interface Piece {
-  image: string;
-  y: number;
-  x: number;
-  type: PieceType;
-  color: PieceColor;
-}
-
-// add pawns
-const pawnsConfig = [
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-];
-// add pieces, left to right:
-//  rook, knight, bishop, queen, king, bishop, knight, rook
-const piecesConfig = [
-  PieceType.ROOK,
-  PieceType.KNIGHT,
-  PieceType.BISHOP,
-  PieceType.QUEEN,
-  PieceType.KING,
-  PieceType.BISHOP,
-  PieceType.KNIGHT,
-  PieceType.ROOK,
-]; // TODO: can make it more compact than specifying basically same information twice? piecesConfig and pieceTypesConfig
-
-const initialPieces: Piece[] = [];
-for (let i = 0; i < 8; i++) {
-  // white
-  let image_path_white_piece = `assets/images/${PieceColor.WHITE}_${piecesConfig[i]}.png`;
-  initialPieces.push({
-    image: image_path_white_piece,
-    x: i,
-    y: 0,
-    type: piecesConfig[i],
-    color: PieceColor.WHITE,
-  });
-  let image_path_white_pawn = `assets/images/${PieceColor.WHITE}_${pawnsConfig[i]}.png`;
-  initialPieces.push({
-    image: image_path_white_pawn,
-    x: i,
-    y: 1,
-    type: PieceType.PAWN,
-    color: PieceColor.WHITE,
-  });
-  // black
-  let image_path_black_piece = `assets/images/${PieceColor.BLACK}_${piecesConfig[i]}.png`;
-  initialPieces.push({
-    image: image_path_black_piece,
-    x: i,
-    y: 7,
-    type: piecesConfig[i],
-    color: PieceColor.BLACK,
-  });
-  let image_path_black_pawn = `assets/images/${PieceColor.BLACK}_${pawnsConfig[i]}.png`;
-  initialPieces.push({
-    image: image_path_black_pawn,
-    x: i,
-    y: 6,
-    type: PieceType.PAWN,
-    color: PieceColor.BLACK,
-  });
-}
+import {
+  ChessMove,
+  BoardState,
+  Position,
+  kInitialPieces,
+  PieceColor,
+  Piece,
+  kVerticalAxis,
+  kHorizontalAxis,
+  kTileSize,
+  kGridSize,
+  equalsPosition
+} from "../../Constants";
 
 const initialMoveHistory: ChessMove[] = [];
 
 export default function Chessboard() {
-  const [sourceX, setGridX] = useState(0);
-  const [sourceY, setGridY] = useState(0);
+  const [grabPosition, setGrabPosition] = useState<Position>({ x: -1, y: -1 });
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
 
   const chessBoardRef = useRef<HTMLDivElement>(null);
   const [boardState, setBoardState] = useState<BoardState>(
-    new BoardState(initialPieces, initialMoveHistory)
+    new BoardState(kInitialPieces, initialMoveHistory)
   );
 
   const referee = new Referee();
@@ -143,11 +35,16 @@ export default function Chessboard() {
     const element = e.target as HTMLElement;
     const chessboard = chessBoardRef.current;
     if (element.classList.contains("chess-piece") && chessboard) {
-      setGridX(Math.floor((e.clientX - chessboard.offsetLeft) / 100));
-      setGridY(Math.floor((800 - e.clientY + chessboard.offsetTop) / 100)); // TODO: set proper chessboard size
+      setGrabPosition({
+        // Find grid coordinates from mouse event coordinates
+        x: Math.floor((e.clientX - chessboard.offsetLeft) / kTileSize),
+        y: Math.floor(
+          (kGridSize * kTileSize - e.clientY + chessboard.offsetTop) / kTileSize
+        ),
+      }); // TODO: set proper chessboard size
       // only interact with chess pieces
-      const x = e.clientX - 50; // TODO: extract offset
-      const y = e.clientY - 50;
+      const x = e.clientX - (kTileSize/2); // TODO: extract offset
+      const y = e.clientY - (kTileSize/2);
       element.style.position = "absolute";
       element.style.left = `${x}px`;
       element.style.top = `${y}px`;
@@ -164,8 +61,8 @@ export default function Chessboard() {
       const maxX = chessboard.offsetLeft + chessboard.clientWidth - 75;
       const maxY = chessboard.offsetTop + chessboard.clientHeight - 75;
 
-      const x = e.clientX - 50; // TODO: extract offset
-      const y = e.clientY - 50;
+      const x = e.clientX - (kTileSize/2); // TODO: extract offset
+      const y = e.clientY - (kTileSize/2);
       activePiece.style.position = "absolute";
 
       if (x < minX) {
@@ -190,46 +87,42 @@ export default function Chessboard() {
     console.log(e);
     const chessboard = chessBoardRef.current;
     if (activePiece && chessboard) {
-      const targetX = Math.floor((e.clientX - chessboard.offsetLeft) / 100);
+      const targetX = Math.floor((e.clientX - chessboard.offsetLeft) / kTileSize);
       const targetY = Math.floor(
-        (800 - e.clientY + chessboard.offsetTop) / 100
+        (kGridSize*kTileSize - e.clientY + chessboard.offsetTop) / kTileSize
       ); // TODO: set proper chessboard size
+      const targetPosition: Position = {x: targetX, y: targetY};
       // Check if move is valid
 
       const currentPiece = boardState.pieces.find(
-        (p) => p.x === sourceX && p.y === sourceY
+        (p) => equalsPosition(p.position, grabPosition)
       );
       //const attackedPiece = pieces.find((p) => p.x === x && p.y === y);
 
       // Update piece positions
       if (currentPiece) {
         const validMove = referee.isVaLidMove(
-          sourceX,
-          sourceY,
-          targetX,
-          targetY,
+          grabPosition,
+          targetPosition,
           currentPiece.type,
           currentPiece.color,
           boardState
         );
 
         const isEnPassantMove = referee.moveIsEnPassant(
-          sourceX,
-          sourceY,
-          targetX,
-          targetY,
+          grabPosition,
+          targetPosition,
           currentPiece.type,
           currentPiece.color,
           boardState
         );
-
         if (validMove || isEnPassantMove) {
           // Add move to move history
           const newMove: ChessMove = new ChessMove(
             currentPiece.type,
             currentPiece.color,
-            sourceX,
-            sourceY,
+            grabPosition.x,
+            grabPosition.y,
             targetX,
             targetY
           );
@@ -247,12 +140,16 @@ export default function Chessboard() {
             captureY = captureY - forwardDirection;
           }
           const newPieces = boardState.pieces.reduce((results, piece) => {
-            if (piece.x === sourceX && piece.y === sourceY) {
+            if (
+              equalsPosition(piece.position, grabPosition)
+            ) {
               // if no deep copy of pieces were made, we would need piece.team === currentPiece.team as well
-              piece.x = targetX;
-              piece.y = targetY;
+              piece.position.x = targetX;
+              piece.position.y = targetY;
               results.push(piece);
-            } else if (!(piece.x === captureX && piece.y === captureY)) {
+            } else if (
+              !(equalsPosition(piece.position, {x: captureX, y: captureY}))
+            ) {
               // move all pieces but the one attacked (which could be non-existent, so cannot check it explicitly)
               results.push(piece);
             }
@@ -276,16 +173,11 @@ export default function Chessboard() {
     }
   }
 
-  for (let j = verticalAxis.length - 1; j >= 0; j--) {
-    for (let i = 0; i < horizontalAxis.length; i++) {
+  for (let j = kVerticalAxis.length - 1; j >= 0; j--) {
+    for (let i = 0; i < kHorizontalAxis.length; i++) {
       const number = j + i;
-      let image = undefined;
-
-      boardState.pieces.forEach((p) => {
-        if (p.x === i && p.y === j) {
-          image = p.image;
-        }
-      });
+      const piece = boardState.pieces.find(p => equalsPosition(p.position, {x: i, y: j}));
+      let image = piece? piece.image : undefined;
       board.push(
         <Tile key={`${i}, ${j}`} number={number} image={image}></Tile>
       );

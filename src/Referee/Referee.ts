@@ -3,11 +3,13 @@ import {
   PieceType,
   PieceColor,
   BoardState,
-} from "../components/Chessboard/Chessboard";
+  Position,
+  equalsPosition,
+} from "../Constants";
 
 export default class Referee {
-  tileIsOccupied(x: number, y: number, boardState: Piece[]): boolean {
-    const piece = boardState.find((p) => p.x === x && p.y === y);
+  tileIsOccupied(position: Position, boardState: Piece[]): boolean {
+    const piece = boardState.find((p) => equalsPosition(p.position, position));
     if (piece) {
       return true;
     } else {
@@ -15,14 +17,13 @@ export default class Referee {
     }
   }
   tileIsOccupiedBy(
-    x: number,
-    y: number,
+    position: Position,
     boardState: Piece[],
     team: PieceColor
   ): boolean {
     /// Given a color (team), check if (x,y) is occupied by a piece that belongs to that color.
     const piece = boardState.find(
-      (p) => p.x === x && p.y === y && p.color === team
+      (p) => equalsPosition(p.position, position) && p.color === team
     );
     if (piece) {
       return true;
@@ -32,10 +33,8 @@ export default class Referee {
   }
 
   moveIsEnPassant(
-    sourceX: number,
-    sourceY: number,
-    targetX: number,
-    targetY: number,
+    sourcePosition: Position,
+    targetPosition: Position,
     movingPieceType: PieceType,
     movingPieceColor: PieceColor,
     boardState: BoardState
@@ -50,6 +49,11 @@ export default class Referee {
     if (boardState.moveHistory.length < 1) {
       return false;
     }
+    const sourceX: number = sourcePosition.x;
+    const sourceY: number = sourcePosition.y;
+    const targetX: number = targetPosition.x;
+    const targetY: number = targetPosition.y;
+
     // The number of horizontal moves
     const deltaX = Math.abs(targetX - sourceX);
     // forward is dependent on color! Should be positive if moving forward, negative if backward
@@ -66,35 +70,43 @@ export default class Referee {
     // 1. if there is a pawn P at (targetX, sourceY). This pawn would be captured.
     // 2. if the P has opposite color
     const pieceToCapture = boardState.pieces.find(
-      (p) => p.x === targetX && p.y === sourceY && p.color !== movingPieceColor
+      (p) =>
+        p.position.x === targetX &&
+        p.position.y === sourceY &&
+        p.color !== movingPieceColor
     );
-    if (!pieceToCapture) {
-      // No piece to be captured is found
+    if (!pieceToCapture || pieceToCapture.type !== PieceType.PAWN) {
+      // No piece to be captured is found or found piece is not a pawn
       return false;
     }
     // 3. if the pawn P just made a first move of double squares.
     //  It is enough to show that the previous move (two moves forward by P) ends up at same Y where attacking pawn is originally,
     //  and the x of P is where the attacking pawn ends up
-    const previousMove = boardState.moveHistory[boardState.moveHistory.length - 1];
-    if (!(previousMove.targetY === sourceY && previousMove.sourceX === targetX)) {
+    const previousMove =
+      boardState.moveHistory[boardState.moveHistory.length - 1];
+    if (
+      !(previousMove.targetY === sourceY && previousMove.sourceX === targetX)
+    ) {
       return false;
     }
     // 4. if we end up on third rank of enemy. Equivalent: if P has just moved 2 along Y axis.
-    if(!(Math.abs(previousMove.targetY - previousMove.targetX)===2)){
+    if (!(Math.abs(previousMove.targetY - previousMove.sourceY) === 2)) {
       return false;
     }
     return true;
   }
 
   isVaLidMove(
-    sourceX: number,
-    sourceY: number,
-    targetX: number,
-    targetY: number,
+    sourcePosition: Position,
+    targetPosition: Position,
     pieceType: PieceType,
     pieceColor: PieceColor,
     boardState: BoardState
   ) {
+    const sourceX: number = sourcePosition.x;
+    const sourceY: number = sourcePosition.y;
+    const targetX: number = targetPosition.x;
+    const targetY: number = targetPosition.y;
     const pieces = boardState.pieces;
     const deltaX = Math.abs(targetX - sourceX);
     // forward is dependent on color! Should be positive if moving forward, negative if backward
@@ -111,10 +123,9 @@ export default class Referee {
       // Check based on forward movement
       if (deltaForward === 2 && deltaX === 0 && isOnStartingRank) {
         if (
-          this.tileIsOccupied(targetX, targetY, pieces) ||
+          this.tileIsOccupied(targetPosition, pieces) ||
           this.tileIsOccupied(
-            targetX,
-            Math.abs((targetY + sourceY) / 2),
+            { x: targetX, y: Math.abs((targetY + sourceY) / 2) },
             pieces
           )
         ) {
@@ -124,22 +135,17 @@ export default class Referee {
         return true;
       } else if (deltaForward === 1) {
         if (deltaX === 0) {
-          if (!this.tileIsOccupied(targetX, targetY, pieces)) {
+          if (!this.tileIsOccupied(targetPosition, pieces)) {
             return true;
           }
         } else if (deltaX === 1) {
-          if (this.tileIsOccupied(targetX, targetY, pieces)) {
+          if (this.tileIsOccupied(targetPosition, pieces)) {
             // TODO: check if opposite color!
             const oppositeColor =
               pieceColor === PieceColor.WHITE
                 ? PieceColor.BLACK
                 : PieceColor.WHITE;
-            return this.tileIsOccupiedBy(
-              targetX,
-              targetY,
-              pieces,
-              oppositeColor
-            );
+            return this.tileIsOccupiedBy(targetPosition, pieces, oppositeColor);
           }
         }
       }
