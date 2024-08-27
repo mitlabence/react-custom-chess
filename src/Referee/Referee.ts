@@ -82,6 +82,26 @@ export default class Referee {
 
     return false;
   }
+
+  canMoveStraightTo(
+    sourcePosition: Position,
+    targetPosition: Position,
+    boardState: BoardState,
+    ownColor: PieceColor
+  ) {
+    // Check if the tiles along a straight path between sourcePosition to targetPosition are
+    // free from any pieces, and targetPosition is not occupied by a piece with color ownColor.
+
+    // 1. Check if "straight" (diagonal) path from second up to second-to-last tile is occupied by any piece. Move fails if yes.
+    if (this.straightPathOccupied(sourcePosition, targetPosition, boardState)) {
+      return false;
+    }
+    // 2. Check if target field is occupied by own color piece; otherwise, valid move.
+    if (this.tileIsOccupiedBy(targetPosition, boardState, ownColor)) {
+      return false;
+    }
+    return true;
+  }
   moveIsEnPassant(
     sourcePosition: Position,
     targetPosition: Position,
@@ -163,6 +183,13 @@ export default class Referee {
       pieceColor === PieceColor.WHITE ? targetY - sourceY : sourceY - targetY;
     const oppositeColor =
       pieceColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+    const isDiagonal: boolean = !(
+      deltaForward === 0 || Math.abs(deltaForward) !== deltaXAbs
+    );
+    const isHorizontalOrVertical: boolean = !(
+      (deltaForward !== 0) ===
+      (deltaXAbs !== 0)
+    ); // negation of: either no move, or move both horizontally and vertically
     if (pieceType === PieceType.PAWN) {
       // First step can be 1 or 2 squares forward. White: source -> target is an increment, black: decrement
       // For pawn, important to know if it is on second rank of its color (pawns can move 2 forward as first move)
@@ -224,30 +251,41 @@ export default class Referee {
           return true;
         }
       }
-    } else if (pieceType === PieceType.BISHOP || pieceType === PieceType.ROOK) {
+    } else if (pieceType === PieceType.BISHOP) {
       // 1. Check path shape:
-      // Bishop: should be a diagonal move that changes position, i.e. deltaX > 0 and abs(deltaX) === abs(deltaY)
-      if (pieceType === PieceType.BISHOP) {
-        if (deltaForward === 0 || Math.abs(deltaForward) !== deltaXAbs) {
-          return false;
-        }
+
+      if (pieceType === PieceType.BISHOP && !isDiagonal) {
+        // Bishop: should be a diagonal move that changes position, i.e. deltaX > 0 and abs(deltaX) === abs(deltaY)
+        return false;
+      }
+      return this.canMoveStraightTo(
+        sourcePosition,
+        targetPosition,
+        boardState,
+        pieceColor
+      );
+    } else if (pieceType === PieceType.ROOK) {
+      if (!isHorizontalOrVertical) {
         // Rook: should be horizontal or vertical move that changes position, i.e. deltaX > 0 XOR deltaY > 0, i.e. these two should be 1 true, 1 false
-      } else { 
-        if ((deltaForward !== 0) === (deltaXAbs !== 0)) {  // either no move, or move both horizontally and vertically
-          return false;
-        }
-      }
-      // 2. Check if "straight" (diagonal) path from second up to second-to-last tile is occupied by any piece. Move fails if yes.
-      if (
-        this.straightPathOccupied(sourcePosition, targetPosition, boardState)
-      ) {
         return false;
       }
-      // 3. Check if target field is occupied by own color piece; otherwise, valid move.
-      if (this.tileIsOccupiedBy(targetPosition, boardState, pieceColor)) {
+      return this.canMoveStraightTo(
+        sourcePosition,
+        targetPosition,
+        boardState,
+        pieceColor
+      );
+    } else if (pieceType === PieceType.QUEEN) {
+      if (!isDiagonal && !isHorizontalOrVertical) {
+        // Queen: either diagonal or horizontal or vertical. So if not any of the previous
         return false;
       }
-      return true;
+      return this.canMoveStraightTo(
+        sourcePosition,
+        targetPosition,
+        boardState,
+        pieceColor
+      );
     }
     return false;
   }
