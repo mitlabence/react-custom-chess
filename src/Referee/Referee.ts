@@ -58,7 +58,8 @@ export default class Referee {
       // we want to include last tile in the check (for example, pawn move forward should check if there is any piece)
       pathLength += 1;
     }
-    for (let i = 1; i <= pathLength; i++) {  // need equality because pathLength only includes tiles we actually want to check
+    for (let i = 1; i <= pathLength; i++) {
+      // need equality because pathLength only includes tiles we actually want to check
       // Construct position of current tile in path
       let pathX = sourcePosition.x;
       let pathY = sourcePosition.y;
@@ -223,18 +224,27 @@ export default class Referee {
           return true;
         }
       }
-    }
-    else if (pieceType === PieceType.BISHOP){
-      // 1. Check path shape: should be a diagonal move that changes position, i.e. deltaX > 0 and abs(deltaX) === abs(deltaY)
-      if (deltaForward === 0 || Math.abs(deltaForward) !== deltaXAbs) {
-        return false;
+    } else if (pieceType === PieceType.BISHOP || pieceType === PieceType.ROOK) {
+      // 1. Check path shape:
+      // Bishop: should be a diagonal move that changes position, i.e. deltaX > 0 and abs(deltaX) === abs(deltaY)
+      if (pieceType === PieceType.BISHOP) {
+        if (deltaForward === 0 || Math.abs(deltaForward) !== deltaXAbs) {
+          return false;
+        }
+        // Rook: should be horizontal or vertical move that changes position, i.e. deltaX > 0 XOR deltaY > 0, i.e. these two should be 1 true, 1 false
+      } else { 
+        if ((deltaForward !== 0) === (deltaXAbs !== 0)) {  // either no move, or move both horizontally and vertically
+          return false;
+        }
       }
       // 2. Check if "straight" (diagonal) path from second up to second-to-last tile is occupied by any piece. Move fails if yes.
-      if (this.straightPathOccupied(sourcePosition, targetPosition, boardState)){
+      if (
+        this.straightPathOccupied(sourcePosition, targetPosition, boardState)
+      ) {
         return false;
       }
       // 3. Check if target field is occupied by own color piece; otherwise, valid move.
-      if (this.tileIsOccupiedBy(targetPosition, boardState, pieceColor)){
+      if (this.tileIsOccupiedBy(targetPosition, boardState, pieceColor)) {
         return false;
       }
       return true;
