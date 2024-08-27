@@ -8,8 +8,10 @@ import {
 } from "../Constants";
 
 export default class Referee {
-  tileIsOccupied(position: Position, boardState: Piece[]): boolean {
-    const piece = boardState.find((p) => equalsPosition(p.position, position));
+  tileIsOccupied(position: Position, boardState: BoardState): boolean {
+    const piece = boardState.pieces.find((p) =>
+      equalsPosition(p.position, position)
+    );
     if (piece) {
       return true;
     } else {
@@ -18,12 +20,12 @@ export default class Referee {
   }
   tileIsOccupiedBy(
     position: Position,
-    boardState: Piece[],
-    team: PieceColor
+    boardState: BoardState,
+    color: PieceColor
   ): boolean {
     /// Given a color (team), check if (x,y) is occupied by a piece that belongs to that color.
-    const piece = boardState.find(
-      (p) => equalsPosition(p.position, position) && p.color === team
+    const piece = boardState.pieces.find(
+      (p) => equalsPosition(p.position, position) && p.color === color
     );
     if (piece) {
       return true;
@@ -32,6 +34,55 @@ export default class Referee {
     }
   }
 
+  straightPathOccupied(
+    sourcePosition: Position,
+    targetPosition: Position,
+    boardState: BoardState,
+    includeTarget: boolean = false
+  ): boolean {
+    /// Given a current position and a target position, find out whether any tile along the straight path (horizontal, vertical, or diagonal)
+    /// connecting these two positions is occupied by any piece (i.e. excluding begin and end positions). If the path is not straight, returns true.
+    const deltaX: number = targetPosition.x - sourcePosition.x;
+    const deltaY: number = targetPosition.y - sourcePosition.y;
+    if (deltaX !== 0 && deltaY !== 0 && Math.abs(deltaX) !== Math.abs(deltaY)) {
+      // not horizontal, vertical, or diagonal path
+      return true;
+    }
+    const horizontalStep: number = deltaX > 0 ? 1 : -1;
+    const verticalStep: number = deltaY > 0 ? 1 : -1;
+    // loop over path in one for loop
+    // determine path length: if horizontal, it is abs(deltaX) - 1; if vertical, abs(deltaY) - 1; if diagonal, both should be the same
+    var pathLength = Math.max(Math.abs(deltaX) - 1, Math.abs(deltaY) - 1);
+    // Step over all tiles starting with neighbor of currentPosition, and end with neighbor of targetPosition
+    if (includeTarget) {
+      // we want to include last tile in the check (for example, pawn move forward should check if there is any piece)
+      pathLength += 1;
+    }
+    for (let i = 1; i <= pathLength; i++) {  // need equality because pathLength only includes tiles we actually want to check
+      console.log(`i is ${i}`);
+      // Construct position of current tile in path
+      let pathX = sourcePosition.x;
+      let pathY = sourcePosition.y;
+      if (deltaX !== 0) {
+        pathX += i * horizontalStep;
+      }
+      if (deltaY !== 0) {
+        pathY += i * verticalStep;
+      }
+      const pathPosition: Position = { x: pathX, y: pathY };
+      console.log(`Checking (${pathPosition.x}, ${pathPosition.y})`);
+      // Check if a piece is on the tile, color does not matter
+      const piece = boardState.pieces.find((p) =>
+        equalsPosition(p.position, pathPosition)
+      );
+      if (piece) {
+        // found such a piece
+        return true;
+      }
+    }
+
+    return false;
+  }
   moveIsEnPassant(
     sourcePosition: Position,
     targetPosition: Position,
@@ -107,11 +158,12 @@ export default class Referee {
     const sourceY: number = sourcePosition.y;
     const targetX: number = targetPosition.x;
     const targetY: number = targetPosition.y;
-    const pieces = boardState.pieces;
-    const deltaX = Math.abs(targetX - sourceX);
+    const deltaXAbs = Math.abs(targetX - sourceX);
     // forward is dependent on color! Should be positive if moving forward, negative if backward
     const deltaForward =
       pieceColor === PieceColor.WHITE ? targetY - sourceY : sourceY - targetY;
+    const oppositeColor =
+      pieceColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
     if (pieceType === PieceType.PAWN) {
       // First step can be 1 or 2 squares forward. White: source -> target is an increment, black: decrement
       // For pawn, important to know if it is on second rank of its color (pawns can move 2 forward as first move)
@@ -121,12 +173,18 @@ export default class Referee {
           ? true
           : false;
       // Check based on forward movement
-      if (deltaForward === 2 && deltaX === 0 && isOnStartingRank) {
+      if (deltaForward === 2 && deltaXAbs === 0 && isOnStartingRank) {
         if (
-          this.tileIsOccupied(targetPosition, pieces) ||
-          this.tileIsOccupied(
-            { x: targetX, y: Math.abs((targetY + sourceY) / 2) },
-            pieces
+          //this.tileIsOccupied(targetPosition, boardState) ||
+          //this.tileIsOccupied(
+          //  { x: targetX, y: Math.abs((targetY + sourceY) / 2) },
+          //  boardState
+          //)
+          this.straightPathOccupied(
+            sourcePosition,
+            targetPosition,
+            boardState,
+            true
           )
         ) {
           // if moving 2 steps forward, check if tile pawn would move to and tile between source and target are free
@@ -134,19 +192,37 @@ export default class Referee {
         }
         return true;
       } else if (deltaForward === 1) {
-        if (deltaX === 0) {
-          if (!this.tileIsOccupied(targetPosition, pieces)) {
+        if (deltaXAbs === 0) {
+          if (
+            !this.straightPathOccupied(
+              sourcePosition,
+              targetPosition,
+              boardState,
+              true
+            )
+          ) {
             return true;
           }
-        } else if (deltaX === 1) {
-          if (this.tileIsOccupied(targetPosition, pieces)) {
-            // TODO: check if opposite color!
-            const oppositeColor =
-              pieceColor === PieceColor.WHITE
-                ? PieceColor.BLACK
-                : PieceColor.WHITE;
-            return this.tileIsOccupiedBy(targetPosition, pieces, oppositeColor);
+        } else if (deltaXAbs === 1) {
+          if (this.tileIsOccupied(targetPosition, boardState)) {
+            return this.tileIsOccupiedBy(
+              targetPosition,
+              boardState,
+              oppositeColor
+            );
           }
+        }
+      }
+    } else if (pieceType === PieceType.KNIGHT) {
+      // Knight moves 2 vertically, 1 horiziontally, or vice versa.
+      if (
+        (Math.abs(deltaForward) === 2 && deltaXAbs === 1) ||
+        (Math.abs(deltaForward) === 1 && deltaXAbs === 2)
+      ) {
+        if (this.tileIsOccupiedBy(targetPosition, boardState, oppositeColor)) {
+          return true;
+        } else if (!this.tileIsOccupied(targetPosition, boardState)) {
+          return true;
         }
       }
     }
