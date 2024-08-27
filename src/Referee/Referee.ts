@@ -59,7 +59,6 @@ export default class Referee {
       pathLength += 1;
     }
     for (let i = 1; i <= pathLength; i++) {  // need equality because pathLength only includes tiles we actually want to check
-      console.log(`i is ${i}`);
       // Construct position of current tile in path
       let pathX = sourcePosition.x;
       let pathY = sourcePosition.y;
@@ -70,7 +69,6 @@ export default class Referee {
         pathY += i * verticalStep;
       }
       const pathPosition: Position = { x: pathX, y: pathY };
-      console.log(`Checking (${pathPosition.x}, ${pathPosition.y})`);
       // Check if a piece is on the tile, color does not matter
       const piece = boardState.pieces.find((p) =>
         equalsPosition(p.position, pathPosition)
@@ -225,6 +223,21 @@ export default class Referee {
           return true;
         }
       }
+    }
+    else if (pieceType === PieceType.BISHOP){
+      // 1. Check path shape: should be a diagonal move that changes position, i.e. deltaX > 0 and abs(deltaX) === abs(deltaY)
+      if (deltaForward === 0 || Math.abs(deltaForward) !== deltaXAbs) {
+        return false;
+      }
+      // 2. Check if "straight" (diagonal) path from second up to second-to-last tile is occupied by any piece. Move fails if yes.
+      if (this.straightPathOccupied(sourcePosition, targetPosition, boardState)){
+        return false;
+      }
+      // 3. Check if target field is occupied by own color piece; otherwise, valid move.
+      if (this.tileIsOccupiedBy(targetPosition, boardState, pieceColor)){
+        return false;
+      }
+      return true;
     }
     return false;
   }
