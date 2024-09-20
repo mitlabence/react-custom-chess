@@ -3,6 +3,9 @@ import Tile from "../Tile/Tile";
 import "./Chessboard.css";
 import Referee from "../../Referee/Referee";
 import {
+  moveIsEnPassant
+} from "../../Referee/Referee";
+import {
   ChessMove,
   BoardState,
   Position,
@@ -16,6 +19,8 @@ import {
   equalsPosition,
   PieceType,
 } from "../../Constants";
+
+
 
 const initialMoveHistory: ChessMove[] = [];
 
@@ -33,8 +38,20 @@ export default function Chessboard() {
   const referee = new Referee();
 
   let board = [];
-
+  function updateValidMoves() {
+    // add possible moves to boardState pieces
+    const updatedPieces = boardState.pieces.map((piece) => {
+      piece.possibleMoves = referee.getValidMoves(piece, boardState);
+      return piece;
+    });
+    const newBoardState: BoardState = new BoardState(
+      updatedPieces,
+      boardState.moveHistory
+    );
+    setBoardState(newBoardState);
+  }
   function grabPiece(e: React.MouseEvent) {
+    updateValidMoves();
     const element = e.target as HTMLElement;
     const chessboard = chessBoardRef.current;
     if (element.classList.contains("chess-piece") && chessboard) {
@@ -105,7 +122,6 @@ export default function Chessboard() {
     );
     setBoardState(newBoardState);
     modalRef.current?.classList.add("hidden");
-
   }
 
   function dropPiece(e: React.MouseEvent) {
@@ -135,7 +151,7 @@ export default function Chessboard() {
           boardState
         );
 
-        const isEnPassantMove = referee.moveIsEnPassant(
+        const isEnPassantMove: boolean = moveIsEnPassant(
           grabPosition,
           targetPosition,
           currentPiece.type,
@@ -167,7 +183,10 @@ export default function Chessboard() {
             // For en passant, the captured piece is actually not at the coordinates where the moved piece ends up,
             // but one behind
             captureY = captureY - forwardDirection;
-          } else if (currentPiece.type === PieceType.PAWN && targetY === promotionRow) {
+          } else if (
+            currentPiece.type === PieceType.PAWN &&
+            targetY === promotionRow
+          ) {
             modalRef.current?.classList.remove("hidden");
             setPromotionPawn(currentPiece);
           }
@@ -209,8 +228,24 @@ export default function Chessboard() {
         equalsPosition(p.position, { x: i, y: j })
       );
       let image = piece ? piece.image : undefined;
+      let grabbedPiece =
+        activePiece != null
+          ? boardState.pieces.find((p) =>
+              equalsPosition(p.position, grabPosition)
+            )
+          : undefined;
+      let isHighlighted: boolean = grabbedPiece?.possibleMoves
+        ? grabbedPiece.possibleMoves.some((p) =>
+            equalsPosition(p, { x: i, y: j })
+          )
+        : false; // highlight the valid moves of grabbed piece
       board.push(
-        <Tile key={`${i}, ${j}`} number={number} image={image}></Tile>
+        <Tile
+          key={`${i}, ${j}`}
+          number={number}
+          image={image}
+          highlight={isHighlighted}
+        ></Tile>
       );
     }
   }

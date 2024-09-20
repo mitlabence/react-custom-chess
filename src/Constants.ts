@@ -64,6 +64,7 @@ export interface Piece {
   position: Position;
   type: PieceType;
   color: PieceColor;
+  possibleMoves?: Position[];
 }
 
 // add pawns
