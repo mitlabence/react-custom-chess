@@ -1,57 +1,34 @@
 import { useRef, useState } from "react";
 import Tile from "../Tile/Tile";
 import "./Chessboard.css";
-import Referee from "../../Referee/Referee";
+
 import {
-  moveIsEnPassant
-} from "../../Referee/Referee";
-import {
-  ChessMove,
   BoardState,
   Position,
-  kInitialPieces,
-  PieceColor,
   Piece,
   kVerticalAxis,
   kHorizontalAxis,
   kTileSize,
   kGridSize,
   equalsPosition,
-  PieceType,
 } from "../../Constants";
 
+interface Props {
+  playMove: (piece: Piece, targetPosition: Position) => boolean;
+  boardState: BoardState;
+}
 
-
-const initialMoveHistory: ChessMove[] = [];
-
-export default function Chessboard() {
+export default function Chessboard({
+  playMove,
+  boardState,
+}: Props) {
   const [grabPosition, setGrabPosition] = useState<Position>({ x: -1, y: -1 });
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
-  const [promotionPawn, setPromotionPawn] = useState<Piece>();
   const chessBoardRef = useRef<HTMLDivElement>(null);
-  const [boardState, setBoardState] = useState<BoardState>(
-    new BoardState(kInitialPieces, initialMoveHistory)
-  );
-
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  const referee = new Referee();
 
   let board = [];
-  function updateValidMoves() {
-    // add possible moves to boardState pieces
-    const updatedPieces = boardState.pieces.map((piece) => {
-      piece.possibleMoves = referee.getValidMoves(piece, boardState);
-      return piece;
-    });
-    const newBoardState: BoardState = new BoardState(
-      updatedPieces,
-      boardState.moveHistory
-    );
-    setBoardState(newBoardState);
-  }
+
   function grabPiece(e: React.MouseEvent) {
-    updateValidMoves();
     const element = e.target as HTMLElement;
     const chessboard = chessBoardRef.current;
     if (element.classList.contains("chess-piece") && chessboard) {
@@ -103,27 +80,6 @@ export default function Chessboard() {
     }
   }
 
-  function promotePawn(pieceType: PieceType) {
-    if (promotionPawn === undefined) return;
-    const updatedPieces = boardState.pieces.reduce((results, piece) => {
-      if (equalsPosition(piece.position, promotionPawn.position)) {
-        piece.type = pieceType;
-        piece.image = `assets/images/${piece.color}_${pieceType}.png`;
-      }
-
-      results.push(piece);
-      return results;
-    }, [] as Piece[]);
-    // Update pieces and move history
-    // TODO: add promotion somehow to move history?
-    const newBoardState: BoardState = new BoardState(
-      updatedPieces,
-      boardState.moveHistory
-    );
-    setBoardState(newBoardState);
-    modalRef.current?.classList.add("hidden");
-  }
-
   function dropPiece(e: React.MouseEvent) {
     const chessboard = chessBoardRef.current;
     if (activePiece && chessboard) {
@@ -143,74 +99,8 @@ export default function Chessboard() {
 
       // Update piece positions
       if (currentPiece) {
-        const validMove = referee.isVaLidMove(
-          grabPosition,
-          targetPosition,
-          currentPiece.type,
-          currentPiece.color,
-          boardState
-        );
-
-        const isEnPassantMove: boolean = moveIsEnPassant(
-          grabPosition,
-          targetPosition,
-          currentPiece.type,
-          currentPiece.color,
-          boardState
-        );
-        if (validMove || isEnPassantMove) {
-          // Add move to move history
-          const newMove: ChessMove = new ChessMove(
-            currentPiece.type,
-            currentPiece.color,
-            grabPosition.x,
-            grabPosition.y,
-            targetX,
-            targetY
-          );
-          // Check if pawn is promoting by reaching last row for team
-          let promotionRow = currentPiece.color === PieceColor.WHITE ? 7 : 0;
-
-          // Update pieces on the board
-          // One piece is moved (as it is a valid move); up to one piece might be captured
-          // Initially, set the coordinates of a potentially captured piece
-          let captureX = targetX;
-          let captureY = targetY;
-          if (isEnPassantMove) {
-            // Define what is one tile "in front" of moving piece
-            const forwardDirection =
-              currentPiece.color === PieceColor.WHITE ? +1 : -1;
-            // For en passant, the captured piece is actually not at the coordinates where the moved piece ends up,
-            // but one behind
-            captureY = captureY - forwardDirection;
-          } else if (
-            currentPiece.type === PieceType.PAWN &&
-            targetY === promotionRow
-          ) {
-            modalRef.current?.classList.remove("hidden");
-            setPromotionPawn(currentPiece);
-          }
-          const newPieces = boardState.pieces.reduce((results, piece) => {
-            if (equalsPosition(piece.position, grabPosition)) {
-              // if no deep copy of pieces were made, we would need piece.team === currentPiece.team as well
-              piece.position.x = targetX;
-              piece.position.y = targetY;
-              results.push(piece);
-            } else if (
-              !equalsPosition(piece.position, { x: captureX, y: captureY })
-            ) {
-              // move all pieces but the one attacked (which could be non-existent, so cannot check it explicitly)
-              results.push(piece);
-            }
-            return results;
-          }, [] as Piece[]);
-          // Update pieces and move history
-          const newBoardState: BoardState = new BoardState(newPieces, [
-            ...boardState.moveHistory,
-            newMove,
-          ]);
-          setBoardState(newBoardState);
-        } else {
+        var moveSuccessful = playMove(currentPiece, targetPosition);
+        if (!moveSuccessful) {
           // reset piece location
           activePiece.style.position = "relative";
           activePiece.style.removeProperty("top");
@@ -251,26 +141,6 @@ export default function Chessboard() {
   }
   return (
     <>
-      <div id="pawn-promotion-modal" className="hidden" ref={modalRef}>
-        <div className="modal-body">
-          <img
-            onClick={() => promotePawn(PieceType.QUEEN)}
-            src={`assets/images/${promotionPawn?.color}_queen.png`}
-          />
-          <img
-            onClick={() => promotePawn(PieceType.ROOK)}
-            src={`assets/images/${promotionPawn?.color}_rook.png`}
-          />
-          <img
-            onClick={() => promotePawn(PieceType.BISHOP)}
-            src={`assets/images/${promotionPawn?.color}_bishop.png`}
-          />
-          <img
-            onClick={() => promotePawn(PieceType.KNIGHT)}
-            src={`assets/images/${promotionPawn?.color}_knight.png`}
-          />
-        </div>
-      </div>
       <div
         onMouseDown={(e) => grabPiece(e)}
         onMouseMove={(e) => movePiece(e)}
