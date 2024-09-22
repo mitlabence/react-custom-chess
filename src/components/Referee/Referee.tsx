@@ -9,6 +9,7 @@ import {
   PieceColor,
   ChessMove,
   equalsPosition,
+  kGridSize,
 } from "../../Constants";
 import Chessboard from "../Chessboard/Chessboard";
 import {
@@ -56,6 +57,8 @@ export default function Referee() {
       (currBoardState) =>
         new BoardState(updatedPieces, currBoardState.moveHistory)
     );
+    // Update possible moves for new board state
+    setBoardState((currBoardState) => getPossibleMoves(currBoardState));
     modalRef.current?.classList.add("hidden");
   }
 
@@ -143,7 +146,7 @@ export default function Referee() {
       );
       
       setBoardState((currBoardState) => getPossibleMoves(currBoardState));
-
+      console.log(targetPosition);
       
     } else {
       return false;
@@ -157,6 +160,10 @@ export default function Referee() {
     pieceType: PieceType,
     pieceColor: PieceColor
   ): boolean {
+    if(targetPosition.x < 0 || targetPosition.x >= kGridSize || targetPosition.y < 0 || targetPosition.y >= kGridSize) {
+      // avoid pieces leaving the board
+      return false;
+    }
     if (pieceType === PieceType.PAWN) {
       return isValidPawnMove(
         sourcePosition,
