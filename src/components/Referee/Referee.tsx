@@ -35,7 +35,7 @@ export default function Referee() {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    updatePossibleMoves();
+    setBoardState(currBoardState => getPossibleMoves(currBoardState));
   }, []);
 
   function promotePawn(pieceType: PieceType) {
@@ -59,17 +59,19 @@ export default function Referee() {
     modalRef.current?.classList.add("hidden");
   }
 
-  function updatePossibleMoves() {
+  function getPossibleMoves(currentBoardState: BoardState) {
     // add possible moves to boardState pieces
-    const updatedPieces = boardState.pieces.map((piece) => {
-      piece.possibleMoves = getValidMoves(piece, boardState);
+    const updatedPieces = currentBoardState.pieces.map((piece) => {
+      piece.possibleMoves = getValidMoves(piece, currentBoardState);
       return piece;
     });
     //setBoardState(newBoardState);
-    setBoardState(
-      (currBoardState) =>
-        new BoardState(updatedPieces, currBoardState.moveHistory)
-    );
+    //setBoardState(
+    //  (currBoardState) =>
+    //    new BoardState(updatedPieces, currBoardState.moveHistory)
+    //);
+    const updatedBoardState = new BoardState(updatedPieces, currentBoardState.moveHistory)
+    return updatedBoardState;
   }
   function playMove(playedPiece: Piece, targetPosition: Position): boolean {
     const validMove = isVaLidMove(
@@ -129,17 +131,19 @@ export default function Referee() {
         ) {
           // move all pieces but the one attacked (which could be non-existent, so cannot check it explicitly)
           results.push(piece);
-        } else {
-          console.log("Capturing ", piece);
         }
         return results;
       }, [] as Piece[]);
+      // Update possible moves for new board state
+
       // Update pieces and move history
-      updatePossibleMoves();
       setBoardState(
         (currBoardState) =>
           new BoardState(newPieces, [...currBoardState.moveHistory, newMove])
       );
+      
+      setBoardState((currBoardState) => getPossibleMoves(currBoardState));
+
       
     } else {
       return false;
