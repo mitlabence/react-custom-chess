@@ -86,9 +86,6 @@ export default function Referee() {
       playedPiece.color,
       boardState
     );
-    if(isEnPassantMove) {
-      console.log("En passant move");
-    }
     if (validMove || isEnPassantMove) {
       // Add move to move history
       const newMove: ChessMove = new ChessMove(
@@ -138,12 +135,12 @@ export default function Referee() {
         return results;
       }, [] as Piece[]);
       // Update pieces and move history
-      
+      updatePossibleMoves();
       setBoardState(
         (currBoardState) =>
           new BoardState(newPieces, [...currBoardState.moveHistory, newMove])
       );
-      updatePossibleMoves();
+      
     } else {
       return false;
     }
