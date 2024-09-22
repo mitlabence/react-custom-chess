@@ -42,11 +42,3 @@
     cursor: pointer;
 }
 
-.tile-highlight::before {
-    content: " ";
-    width: 16px;
-    height: 16px;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 50%;
-
-}

@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
 import Tile from "../Tile/Tile";
 import "./Chessboard.css";
+import { Piece } from "../../models/pieces/Piece";
 
 import {
   BoardState,
   Position,
-  Piece,
   kVerticalAxis,
   kHorizontalAxis,
   kTileSize,

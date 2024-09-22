@@ -1,3 +1,11 @@
+import { Bishop } from "./models/pieces/Bishop";
+import { King } from "./models/pieces/King";
+import { Knight } from "./models/pieces/Knight";
+import { Pawn } from "./models/pieces/Pawn";
+import { Piece } from "./models/pieces/Piece";
+import { Queen } from "./models/pieces/Queen";
+import { Rook } from "./models/pieces/Rook";
+
 export const kVerticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
 export const kHorizontalAxis = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export const kTileSize = 100; // The side length of a chessboard tile in pixels
@@ -23,7 +31,7 @@ export interface Position {
   y: number;
 }
 
-export function equalsPosition(position1: Position, position2: Position){
+export function equalsPosition(position1: Position, position2: Position) {
   return position1.x === position2.x && position1.y === position2.y;
 }
 
@@ -60,68 +68,36 @@ export class BoardState {
   }
 }
 
-export interface Piece {
-  image: string;
-  position: Position;
-  type: PieceType;
-  color: PieceColor;
-  possibleMoves?: Position[];
-}
-
 // add pawns
-export const kPawnsConfig = [
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-  PieceType.PAWN,
-];
+export const kPawnsConfig = [Pawn, Pawn, Pawn, Pawn, Pawn, Pawn, Pawn, Pawn];
 // add pieces, left to right:
 //  rook, knight, bishop, queen, king, bishop, knight, rook
 export const kPiecesConfig = [
-  PieceType.ROOK,
-  PieceType.KNIGHT,
-  PieceType.BISHOP,
-  PieceType.QUEEN,
-  PieceType.KING,
-  PieceType.BISHOP,
-  PieceType.KNIGHT,
-  PieceType.ROOK,
+  Rook,
+  Knight,
+  Bishop,
+  Queen,
+  King,
+  Bishop,
+  Knight,
+  Rook,
 ]; // TODO: can make it more compact than specifying basically same information twice? piecesConfig and pieceTypesConfig
 
 export const kInitialPieces: Piece[] = [];
 for (let i = 0; i < 8; i++) {
   // white
-  let image_path_white_piece = `assets/images/${PieceColor.WHITE}_${kPiecesConfig[i]}.png`;
-  kInitialPieces.push({
-    image: image_path_white_piece,
-    position: { x: i, y: 0 },
-    type: kPiecesConfig[i],
-    color: PieceColor.WHITE,
-  });
-  let image_path_white_pawn = `assets/images/${PieceColor.WHITE}_${kPawnsConfig[i]}.png`;
-  kInitialPieces.push({
-    image: image_path_white_pawn,
-    position: { x: i, y: 1 },
-    type: PieceType.PAWN,
-    color: PieceColor.WHITE,
-  });
+  kInitialPieces.push(new kPiecesConfig[i]({ x: i, y: 0 }, PieceColor.WHITE));
+  kInitialPieces.push(new kPawnsConfig[i]({ x: i, y: 1 }, PieceColor.WHITE));
   // black
-  let image_path_black_piece = `assets/images/${PieceColor.BLACK}_${kPiecesConfig[i]}.png`;
-  kInitialPieces.push({
-    image: image_path_black_piece,
-    position: { x: i, y: 7 },
-    type: kPiecesConfig[i],
-    color: PieceColor.BLACK,
-  });
-  let image_path_black_pawn = `assets/images/${PieceColor.BLACK}_${kPawnsConfig[i]}.png`;
-  kInitialPieces.push({
-    image: image_path_black_pawn,
-    position: { x: i, y: 6 },
-    type: PieceType.PAWN,
-    color: PieceColor.BLACK,
-  });
+  kInitialPieces.push(new kPiecesConfig[i]({ x: i, y: 7 }, PieceColor.BLACK));
+  kInitialPieces.push(new kPawnsConfig[i]({ x: i, y: 6 }, PieceColor.BLACK));
 }
+
+export const kPieceTypeMap = {
+  "pawn" : Pawn,
+  "rook" : Rook,
+  "knight" : Knight,
+  "bishop" : Bishop,
+  "queen" : Queen,
+  "king" : King
+};

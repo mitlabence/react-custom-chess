@@ -5,27 +5,14 @@ import {
   Position,
   kInitialMoveHistory,
   PieceType,
-  Piece,
   PieceColor,
   ChessMove,
   equalsPosition,
   kGridSize,
+  kPieceTypeMap,
 } from "../../Constants";
+import { Piece } from "../../models/pieces/Piece";
 import Chessboard from "../Chessboard/Chessboard";
-import {
-  getValidPawnMoves,
-  isValidPawnMove,
-  getValidBishopMoves,
-  isValidBishopMove,
-  getValidKnightMoves,
-  isValidKnightMove,
-  getValidRookMoves,
-  isValidRookMove,
-  getValidQueenMoves,
-  isValidQueenMove,
-  getValidKingMoves,
-  isValidKingMove,
-} from "../../Referee/rules/rules";
 
 export default function Referee() {
   const [boardState, setBoardState] = useState<BoardState>(
@@ -36,18 +23,20 @@ export default function Referee() {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setBoardState(currBoardState => getPossibleMoves(currBoardState));
+    setBoardState((currBoardState) => getPossibleMoves(currBoardState));
   }, []);
 
   function promotePawn(pieceType: PieceType) {
     if (promotionPawn === undefined) return;
     const updatedPieces = boardState.pieces.reduce((results, piece) => {
       if (equalsPosition(piece.position, promotionPawn.position)) {
-        piece.type = pieceType;
-        piece.image = `assets/images/${piece.color}_${pieceType}.png`;
+        // Found promoted piece
+        const transformedPiece = new kPieceTypeMap[pieceType](promotionPawn.position, promotionPawn.color);
+        results.push(transformedPiece);
       }
-
-      results.push(piece);
+      else {
+        results.push(piece);
+      }
       return results;
     }, [] as Piece[]);
     // Update pieces and move history
@@ -73,16 +62,14 @@ export default function Referee() {
     //  (currBoardState) =>
     //    new BoardState(updatedPieces, currBoardState.moveHistory)
     //);
-    const updatedBoardState = new BoardState(updatedPieces, currentBoardState.moveHistory)
+    const updatedBoardState = new BoardState(
+      updatedPieces,
+      currentBoardState.moveHistory
+    );
     return updatedBoardState;
   }
   function playMove(playedPiece: Piece, targetPosition: Position): boolean {
-    const validMove = isVaLidMove(
-      playedPiece.position,
-      targetPosition,
-      playedPiece.type,
-      playedPiece.color
-    );
+    const validMove = isVaLidMove(playedPiece, targetPosition);
 
     const isEnPassantMove: boolean = moveIsEnPassant(
       playedPiece.position,
@@ -124,7 +111,10 @@ export default function Referee() {
         setPromotionPawn(playedPiece); // FIXME: change promotion pawn back to undefined once promotion is done
       }
       const newPieces = boardState.pieces.reduce((results, piece) => {
-        if (equalsPosition(playedPiece.position, piece.position) && piece.color === playedPiece.color) {
+        if (
+          equalsPosition(playedPiece.position, piece.position) &&
+          piece.color === playedPiece.color
+        ) {
           // if no deep copy of pieces were made, we would need piece.team === currentPiece.team as well
           piece.position.x = targetPosition.x;
           piece.position.y = targetPosition.y;
@@ -144,89 +134,30 @@ export default function Referee() {
         (currBoardState) =>
           new BoardState(newPieces, [...currBoardState.moveHistory, newMove])
       );
-      
+
       setBoardState((currBoardState) => getPossibleMoves(currBoardState));
       console.log(targetPosition);
-      
     } else {
       return false;
     }
     return true;
   }
 
-  function isVaLidMove(
-    sourcePosition: Position,
-    targetPosition: Position,
-    pieceType: PieceType,
-    pieceColor: PieceColor
-  ): boolean {
-    if(targetPosition.x < 0 || targetPosition.x >= kGridSize || targetPosition.y < 0 || targetPosition.y >= kGridSize) {
+  function isVaLidMove(movingPiece: Piece, targetPosition: Position): boolean {
+    if (
+      targetPosition.x < 0 ||
+      targetPosition.x >= kGridSize ||
+      targetPosition.y < 0 ||
+      targetPosition.y >= kGridSize
+    ) {
       // avoid pieces leaving the board
       return false;
     }
-    if (pieceType === PieceType.PAWN) {
-      return isValidPawnMove(
-        sourcePosition,
-        targetPosition,
-        pieceColor,
-        boardState
-      );
-    } else if (pieceType === PieceType.KNIGHT) {
-      return isValidKnightMove(
-        sourcePosition,
-        targetPosition,
-        pieceColor,
-        boardState
-      );
-    } else if (pieceType === PieceType.BISHOP) {
-      return isValidBishopMove(
-        sourcePosition,
-        targetPosition,
-        pieceColor,
-        boardState
-      );
-    } else if (pieceType === PieceType.ROOK) {
-      return isValidRookMove(
-        sourcePosition,
-        targetPosition,
-        pieceColor,
-        boardState
-      );
-    } else if (pieceType === PieceType.QUEEN) {
-      return isValidQueenMove(
-        sourcePosition,
-        targetPosition,
-        pieceColor,
-        boardState
-      );
-    } else if (pieceType === PieceType.KING) {
-      return isValidKingMove(
-        sourcePosition,
-        targetPosition,
-        pieceColor,
-        boardState
-      );
-    }
-    return false;
+    return movingPiece.isValidMove(targetPosition, boardState);
   }
 
   function getValidMoves(piece: Piece, boardState: BoardState): Position[] {
-    switch (piece.type) {
-      case PieceType.PAWN:
-        return getValidPawnMoves(piece, boardState);
-      case PieceType.BISHOP:
-        return getValidBishopMoves(piece, boardState);
-      case PieceType.KNIGHT:
-        return getValidKnightMoves(piece, boardState);
-      case PieceType.ROOK:
-        return getValidRookMoves(piece, boardState);
-      case PieceType.QUEEN:
-        return getValidQueenMoves(piece, boardState);
-      case PieceType.KING:
-        return getValidKingMoves(piece, boardState);
-      default:
-        return [];
-    }
+    return piece.getValidMoves(boardState);
   }
 
   return (
@@ -255,10 +186,7 @@ export default function Referee() {
           />
         </div>
       </div>
-      <Chessboard
-        playMove={playMove}
-        boardState={boardState}
-      />
+      <Chessboard playMove={playMove} boardState={boardState} />
     </>
   );
 }
