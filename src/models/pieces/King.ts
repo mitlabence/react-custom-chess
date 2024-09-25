@@ -1,9 +1,5 @@
 import { kGridSize, PieceColor, PieceType, Position } from "../../Constants";
 import { Piece } from "./Piece";
-import {
-  canMoveStraightTo,
-  tileIsOccupiedBy,
-} from "../../components/Referee/Referee";
 import { BoardState } from "../BoardState";
 // TODO: implement check related logic. Maybe implement a CheckablePiece?
 export class King implements Piece {
@@ -30,10 +26,9 @@ export class King implements Piece {
     const deltaForward =
       this.color === PieceColor.WHITE ? targetY - sourceY : sourceY - targetY;
     if (Math.abs(deltaForward) <= 1 && deltaXAbs <= 1) {
-      return canMoveStraightTo(
+      return boardState.canMoveStraightTo(
         this.position,
         targetPosition,
-        boardState,
         this.color
       );
     }
@@ -60,7 +55,7 @@ export class King implements Piece {
           targetX < kGridSize &&
           targetY >= 0 &&
           targetY < kGridSize &&
-          !tileIsOccupiedBy({ x: targetX, y: targetY }, boardState, pieceColor)
+          !boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, pieceColor)
         ) {
           validMoves.push({ x: targetX, y: targetY });
         }

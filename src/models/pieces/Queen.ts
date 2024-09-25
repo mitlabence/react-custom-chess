@@ -1,9 +1,5 @@
 import { kGridSize, PieceColor, PieceType, Position } from "../../Constants";
 import { Piece } from "./Piece";
-import {
-  canMoveStraightTo,
-  tileIsOccupiedBy,
-} from "../../components/Referee/Referee";
 import { BoardState } from "../BoardState";
 
 export class Queen implements Piece {
@@ -40,10 +36,9 @@ export class Queen implements Piece {
       // Queen: either diagonal or horizontal or vertical. So if not any of the previous
       return false;
     }
-    return canMoveStraightTo(
+    return boardState.canMoveStraightTo(
       this.position,
       targetPosition,
-      boardState,
       this.color
     );
   }
@@ -72,14 +67,12 @@ export class Queen implements Piece {
           targetX < kGridSize &&
           targetY >= 0 &&
           targetY < kGridSize &&
-          !tileIsOccupiedBy({ x: targetX, y: targetY }, boardState, pieceColor)
+          !boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, pieceColor)
         ) {
           validMoves.push({ x: targetX, y: targetY });
           if (
-            tileIsOccupiedBy(
-              { x: targetX, y: targetY },
-              boardState,
-              oppositeColor
+            boardState.tileIsOccupiedBy(
+              { x: targetX, y: targetY }, oppositeColor
             )
           ) {
             break;

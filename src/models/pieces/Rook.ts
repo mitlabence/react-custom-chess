@@ -1,9 +1,5 @@
 import { kGridSize, PieceColor, PieceType, Position } from "../../Constants";
 import { Piece } from "./Piece";
-import {
-  canMoveStraightTo,
-  tileIsOccupiedBy,
-} from "../../components/Referee/Referee";
 import { BoardState } from "../BoardState";
 
 export class Rook implements Piece {
@@ -37,10 +33,9 @@ export class Rook implements Piece {
       // Rook: should be horizontal or vertical move that changes position, i.e. deltaX > 0 XOR deltaY > 0, i.e. these two should be 1 true, 1 false
       return false;
     }
-    return canMoveStraightTo(
+    return boardState.canMoveStraightTo(
       this.position,
       targetPosition,
-      boardState,
       this.color
     );
   }
@@ -63,11 +58,11 @@ export class Rook implements Piece {
       while (
         targetX >= 0 &&
         targetX < kGridSize &&
-        !tileIsOccupiedBy({ x: targetX, y: targetY }, boardState, pieceColor)
+        !boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, pieceColor)
       ) {
         validMoves.push({ x: targetX, y: targetY });
         if (
-          tileIsOccupiedBy({ x: targetX, y: targetY }, boardState, oppositeColor)
+          boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, oppositeColor)
         ) {
           break;
         }
@@ -81,11 +76,11 @@ export class Rook implements Piece {
       while (
         targetY >= 0 &&
         targetY < kGridSize &&
-        !tileIsOccupiedBy({ x: targetX, y: targetY }, boardState, pieceColor)
+        !boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, pieceColor)
       ) {
         validMoves.push({ x: targetX, y: targetY });
         if (
-          tileIsOccupiedBy({ x: targetX, y: targetY }, boardState, oppositeColor)
+          boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, oppositeColor)
         ) {
           break;
         }

@@ -1,11 +1,5 @@
 import { PieceColor, PieceType, Position } from "../../Constants";
 import { Piece } from "./Piece";
-import {
-  tileIsOccupied,
-  tileIsOccupiedBy,
-  moveIsEnPassant,
-  straightPathOccupied,
-} from "../../components/Referee/Referee";
 import { BoardState } from "../BoardState";
 
 export class Pawn implements Piece {
@@ -50,7 +44,7 @@ export class Pawn implements Piece {
         //  { x: targetX, y: Math.abs((targetY + sourceY) / 2) },
         //  boardState
         //)
-        straightPathOccupied(sourcePosition, targetPosition, boardState, true)
+        boardState.straightPathOccupied(sourcePosition, targetPosition, true)
       ) {
         // if moving 2 steps forward, check if tile pawn would move to and tile between source and target are free
         return false;
@@ -59,18 +53,17 @@ export class Pawn implements Piece {
     } else if (deltaForward === 1) {
       if (deltaXAbs === 0) {
         if (
-          !straightPathOccupied(
+          !boardState.straightPathOccupied(
             sourcePosition,
             targetPosition,
-            boardState,
             true
           )
         ) {
           return true;
         }
       } else if (deltaXAbs === 1) {
-        if (tileIsOccupied(targetPosition, boardState)) {
-          return tileIsOccupiedBy(targetPosition, boardState, oppositeColor);
+        if (boardState.tileIsOccupied(targetPosition)) {
+          return boardState.tileIsOccupiedBy(targetPosition, oppositeColor);
         }
       }
     }
@@ -106,44 +99,37 @@ export class Pawn implements Piece {
     const rightAttackMove = { x: sourceX + 1, y: sourceY + forwardDirection };
 
     // 1. Check if single step forward is possible
-    if (!tileIsOccupied(singleForwardMove, boardState)) {
+    if (!boardState.tileIsOccupied(singleForwardMove)) {
       validMoves.push(singleForwardMove);
       // 2. Check if double step forward is possible. Only possible if the single step forward is possible (and pawn is on starting rank)
-      if (isOnStartingRank && !tileIsOccupied(doubleForwardMove, boardState)) {
+      if (isOnStartingRank && !boardState.tileIsOccupied(doubleForwardMove)) {
         validMoves.push(doubleForwardMove);
       }
     }
     // 3. Check if left/right diagonal attack is possible
-    if (tileIsOccupiedBy(leftAttackMove, boardState, oppositeColor)) {
+    if (boardState.tileIsOccupiedBy(leftAttackMove, oppositeColor)) {
       validMoves.push(leftAttackMove);
     }
-    if (tileIsOccupiedBy(rightAttackMove, boardState, oppositeColor)) {
+    if (boardState.tileIsOccupiedBy(rightAttackMove, oppositeColor)) {
       validMoves.push(rightAttackMove);
     }
     // 4. En passant capture
     if (
-      moveIsEnPassant(
+      boardState.moveIsEnPassant(
         this.position,
-        leftAttackMove,
-        this.type,
-        pieceColor,
-        boardState
+        leftAttackMove
       )
     ) {
       validMoves.push(leftAttackMove);
     }
     if (
-      moveIsEnPassant(
+      boardState.moveIsEnPassant(
         this.position,
         rightAttackMove,
-        this.type,
-        pieceColor,
-        boardState
       )
     ) {
       validMoves.push(rightAttackMove);
     }
     this.validMoves = validMoves;
   }
-
 }

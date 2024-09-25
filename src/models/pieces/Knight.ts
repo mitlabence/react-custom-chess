@@ -5,10 +5,6 @@ import {
   Position,
 } from "../../Constants";
 import { Piece } from "./Piece";
-import {
-  tileIsOccupied,
-  tileIsOccupiedBy,
-} from "../../components/Referee/Referee";
 import { BoardState } from "../BoardState";
 
 export class Knight implements Piece {
@@ -41,9 +37,9 @@ export class Knight implements Piece {
       (Math.abs(deltaForward) === 2 && deltaXAbs === 1) ||
       (Math.abs(deltaForward) === 1 && deltaXAbs === 2)
     ) {
-      if (tileIsOccupiedBy(targetPosition, boardState, oppositeColor)) {
+      if (boardState.tileIsOccupiedBy(targetPosition,  oppositeColor)) {
         return true;
-      } else if (!tileIsOccupied(targetPosition, boardState)) {
+      } else if (!boardState.tileIsOccupied(targetPosition)) {
         return true;
       }
     }

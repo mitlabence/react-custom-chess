@@ -1,14 +1,5 @@
-import {
-  kGridSize,
-  PieceColor,
-  PieceType,
-  Position,
-} from "../../Constants";
+import { kGridSize, PieceColor, PieceType, Position } from "../../Constants";
 import { Piece } from "./Piece";
-import {
-  canMoveStraightTo,
-  tileIsOccupiedBy,
-} from "../../components/Referee/Referee";
 import { BoardState } from "../BoardState";
 
 export class Bishop implements Piece {
@@ -42,10 +33,9 @@ export class Bishop implements Piece {
       return false;
     }
 
-    return canMoveStraightTo(
+    return boardState.canMoveStraightTo(
       this.position,
       targetPosition,
-      boardState,
       this.color
     );
   }
@@ -71,13 +61,12 @@ export class Bishop implements Piece {
           targetX < kGridSize &&
           targetY >= 0 &&
           targetY < kGridSize &&
-          !tileIsOccupiedBy({ x: targetX, y: targetY }, boardState, pieceColor)
+          !boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, pieceColor)
         ) {
           validMoves.push({ x: targetX, y: targetY });
           if (
-            tileIsOccupiedBy(
+            boardState.tileIsOccupiedBy(
               { x: targetX, y: targetY },
-              boardState,
               oppositeColor
             )
           ) {
