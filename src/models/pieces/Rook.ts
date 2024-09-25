@@ -1,19 +1,17 @@
-import { BoardState, kGridSize, PieceColor, PieceType, Position } from "../../Constants";
+import { kGridSize, PieceColor, PieceType, Position } from "../../Constants";
 import { Piece } from "./Piece";
 import {
   canMoveStraightTo,
-  tileIsOccupied,
   tileIsOccupiedBy,
-  moveIsEnPassant,
-  straightPathOccupied,
 } from "../../components/Referee/Referee";
+import { BoardState } from "../BoardState";
 
 export class Rook implements Piece {
   image: string;
   position: Position;
   type: PieceType;
   color: PieceColor;
-  possibleMoves?: Position[];
+  validMoves: Position[] = [];
   checkable: boolean = false;
   constructor(position: Position, color: PieceColor) {
     this.image = `assets/images/${color}_rook.png`;
@@ -47,7 +45,7 @@ export class Rook implements Piece {
     );
   }
 
-  getValidMoves(boardState: BoardState): Position[] {
+  updateValidMoves(boardState: BoardState): void {
     const validMoves: Position[] = [];
     const sourceX: number = this.position.x;
     const sourceY: number = this.position.y;
@@ -95,6 +93,6 @@ export class Rook implements Piece {
       }
     }
   
-    return validMoves;
+    this.validMoves = validMoves;
   }
 }

@@ -4,7 +4,6 @@ import "./Chessboard.css";
 import { Piece } from "../../models/pieces/Piece";
 
 import {
-  BoardState,
   Position,
   kVerticalAxis,
   kHorizontalAxis,
@@ -12,6 +11,7 @@ import {
   kGridSize,
   equalsPosition,
 } from "../../Constants";
+import { BoardState } from "../../models/BoardState";
 
 interface Props {
   playMove: (piece: Piece, targetPosition: Position) => boolean;
@@ -81,6 +81,7 @@ export default function Chessboard({
   }
 
   function dropPiece(e: React.MouseEvent) {
+    console.log(e);
     const chessboard = chessBoardRef.current;
     if (activePiece && chessboard) {
       const targetX = Math.floor(
@@ -124,8 +125,8 @@ export default function Chessboard({
               equalsPosition(p.position, grabPosition)
             )
           : undefined;
-      let isHighlighted: boolean = grabbedPiece?.possibleMoves
-        ? grabbedPiece.possibleMoves.some((p) =>
+      let isHighlighted: boolean = grabbedPiece?.validMoves
+        ? grabbedPiece.validMoves.some((p) =>
             equalsPosition(p, { x: i, y: j })
           )
         : false; // highlight the valid moves of grabbed piece

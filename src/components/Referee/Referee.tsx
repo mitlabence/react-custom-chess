@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  BoardState,
   kInitialPieces,
   Position,
   kInitialMoveHistory,
@@ -11,8 +10,10 @@ import {
   kGridSize,
   kPieceTypeMap,
 } from "../../Constants";
+
 import { Piece } from "../../models/pieces/Piece";
 import Chessboard from "../Chessboard/Chessboard";
+import { BoardState } from "../../models/BoardState";
 
 export default function Referee() {
   const [boardState, setBoardState] = useState<BoardState>(
@@ -31,10 +32,12 @@ export default function Referee() {
     const updatedPieces = boardState.pieces.reduce((results, piece) => {
       if (equalsPosition(piece.position, promotionPawn.position)) {
         // Found promoted piece
-        const transformedPiece = new kPieceTypeMap[pieceType](promotionPawn.position, promotionPawn.color);
+        const transformedPiece = new kPieceTypeMap[pieceType](
+          promotionPawn.position,
+          promotionPawn.color
+        );
         results.push(transformedPiece);
-      }
-      else {
+      } else {
         results.push(piece);
       }
       return results;
@@ -52,18 +55,9 @@ export default function Referee() {
   }
 
   function getPossibleMoves(currentBoardState: BoardState) {
-    // add possible moves to boardState pieces
-    const updatedPieces = currentBoardState.pieces.map((piece) => {
-      piece.possibleMoves = getValidMoves(piece, currentBoardState);
-      return piece;
-    });
-    //setBoardState(newBoardState);
-    //setBoardState(
-    //  (currBoardState) =>
-    //    new BoardState(updatedPieces, currBoardState.moveHistory)
-    //);
+    currentBoardState.updatePossibleMoves();
     const updatedBoardState = new BoardState(
-      updatedPieces,
+      currentBoardState.pieces,
       currentBoardState.moveHistory
     );
     return updatedBoardState;
@@ -155,11 +149,6 @@ export default function Referee() {
     }
     return movingPiece.isValidMove(targetPosition, boardState);
   }
-
-  function getValidMoves(piece: Piece, boardState: BoardState): Position[] {
-    return piece.getValidMoves(boardState);
-  }
-
   return (
     <>
       <div id="pawn-promotion-modal" className="hidden" ref={modalRef}>

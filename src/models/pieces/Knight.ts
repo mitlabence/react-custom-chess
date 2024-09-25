@@ -1,5 +1,4 @@
 import {
-  BoardState,
   kGridSize,
   PieceColor,
   PieceType,
@@ -10,13 +9,14 @@ import {
   tileIsOccupied,
   tileIsOccupiedBy,
 } from "../../components/Referee/Referee";
+import { BoardState } from "../BoardState";
 
 export class Knight implements Piece {
   image: string;
   position: Position;
   type: PieceType;
   color: PieceColor;
-  possibleMoves?: Position[];
+  validMoves: Position[] = [];
   checkable: boolean = false;
   constructor(position: Position, color: PieceColor) {
     this.image = `assets/images/${color}_knight.png`;
@@ -50,7 +50,7 @@ export class Knight implements Piece {
     return false;
   }
 
-  getValidMoves(boardState: BoardState): Position[] {
+  updateValidMoves(boardState: BoardState): void {
     const validMoves: Position[] = [];
 
     const sourceX: number = this.position.x;
@@ -92,6 +92,6 @@ export class Knight implements Piece {
         }
       }
     }
-    return validMoves;
+    this.validMoves = validMoves;
   }
 }

@@ -1,5 +1,4 @@
 import {
-  BoardState,
   kGridSize,
   PieceColor,
   PieceType,
@@ -8,18 +7,16 @@ import {
 import { Piece } from "./Piece";
 import {
   canMoveStraightTo,
-  tileIsOccupied,
   tileIsOccupiedBy,
-  moveIsEnPassant,
-  straightPathOccupied,
 } from "../../components/Referee/Referee";
+import { BoardState } from "../BoardState";
 
 export class Bishop implements Piece {
   image: string;
   position: Position;
   type: PieceType;
   color: PieceColor;
-  possibleMoves?: Position[];
+  validMoves: Position[] = [];
   checkable: boolean = false;
   constructor(position: Position, color: PieceColor) {
     this.image = `assets/images/${color}_bishop.png`;
@@ -53,7 +50,7 @@ export class Bishop implements Piece {
     );
   }
 
-  getValidMoves(boardState: BoardState): Position[] {
+  updateValidMoves(boardState: BoardState): void {
     const validMoves: Position[] = [];
 
     const sourceX: number = this.position.x;
@@ -92,6 +89,6 @@ export class Bishop implements Piece {
       }
     }
 
-    return validMoves;
+    this.validMoves = validMoves;
   }
 }

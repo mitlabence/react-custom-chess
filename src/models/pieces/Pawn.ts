@@ -1,19 +1,19 @@
-import { BoardState, PieceColor, PieceType, Position } from "../../Constants";
+import { PieceColor, PieceType, Position } from "../../Constants";
 import { Piece } from "./Piece";
 import {
-  canMoveStraightTo,
   tileIsOccupied,
   tileIsOccupiedBy,
   moveIsEnPassant,
   straightPathOccupied,
 } from "../../components/Referee/Referee";
+import { BoardState } from "../BoardState";
 
 export class Pawn implements Piece {
   image: string;
   position: Position;
   type: PieceType;
   color: PieceColor;
-  possibleMoves?: Position[];
+  validMoves: Position[] = [];
   checkable: boolean = false;
   constructor(position: Position, color: PieceColor) {
     this.image = `assets/images/${color}_pawn.png`;
@@ -78,7 +78,7 @@ export class Pawn implements Piece {
     return false;
   }
 
-  getValidMoves(boardState: BoardState): Position[] {
+  updateValidMoves(boardState: BoardState): void {
     const validMoves: Position[] = [];
     // Valid moves:
     // 1. 1 square forward if empty
@@ -143,6 +143,7 @@ export class Pawn implements Piece {
     ) {
       validMoves.push(rightAttackMove);
     }
-    return validMoves;
+    this.validMoves = validMoves;
   }
+
 }

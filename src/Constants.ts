@@ -1,4 +1,5 @@
 import { Bishop } from "./models/pieces/Bishop";
+import { BoardState } from "./models/BoardState";
 import { King } from "./models/pieces/King";
 import { Knight } from "./models/pieces/Knight";
 import { Pawn } from "./models/pieces/Pawn";
@@ -59,15 +60,6 @@ export class ChessMove {
   }
 }
 
-export class BoardState {
-  pieces: Piece[];
-  moveHistory: ChessMove[];
-  constructor(pieces: Piece[], moveHistory: ChessMove[]) {
-    this.pieces = pieces;
-    this.moveHistory = moveHistory;
-  }
-}
-
 // add pawns
 export const kPawnsConfig = [Pawn, Pawn, Pawn, Pawn, Pawn, Pawn, Pawn, Pawn];
 // add pieces, left to right:
@@ -92,6 +84,9 @@ for (let i = 0; i < 8; i++) {
   kInitialPieces.push(new kPiecesConfig[i]({ x: i, y: 7 }, PieceColor.BLACK));
   kInitialPieces.push(new kPawnsConfig[i]({ x: i, y: 6 }, PieceColor.BLACK));
 }
+
+
+export const kInitialBoardState = new BoardState(kInitialPieces, kInitialMoveHistory);
 
 export const kPieceTypeMap = {
   "pawn" : Pawn,

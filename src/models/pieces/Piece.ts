@@ -1,13 +1,14 @@
-import { BoardState, PieceColor, PieceType, Position } from "../../Constants";
+import { PieceColor, PieceType, Position } from "../../Constants";
+import { BoardState } from "../BoardState";
 
 export interface Piece {
     image: string;
     position: Position;
     type: PieceType;
     color: PieceColor;
-    possibleMoves?: Position[];
+    validMoves: Position[];
     checkable: boolean;  // in standard chess, only the king is checkable.
     
     isValidMove: (targetPosition: Position, boardState: BoardState) => boolean;
-    getValidMoves: (boardState: BoardState) => Position[];
+    updateValidMoves: (boardState: BoardState) => void;
 }
