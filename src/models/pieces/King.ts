@@ -1,24 +1,21 @@
 import { kGridSize, PieceColor, PieceType, Position } from "../../Constants";
-import { Piece } from "./Piece";
+import { ChessPiece } from "./ChessPiece";
 import { BoardState } from "../BoardState";
 // TODO: implement check related logic. Maybe implement a CheckablePiece?
-export class King implements Piece {
+export class King implements ChessPiece {
   image: string;
-  position: Position;
   type: PieceType;
   color: PieceColor;
-  validMoves: Position[] = [];
   checkable: boolean = true;
-  constructor(position: Position, color: PieceColor) {
+  constructor(color: PieceColor) {
     this.image = `assets/images/${color}_king.png`;
-    this.position = position;
     this.type = PieceType.KING;
     this.color = color;
   }
 
-  isValidMove(targetPosition: Position, boardState: BoardState): boolean {
-    const sourceX: number = this.position.x;
-    const sourceY: number = this.position.y;
+  isValidMove(sourcePosition: Position, targetPosition: Position, boardState: BoardState): boolean {
+    const sourceX: number = sourcePosition.x;
+    const sourceY: number = sourcePosition.y;
     const targetX: number = targetPosition.x;
     const targetY: number = targetPosition.y;
     const deltaXAbs = Math.abs(targetX - sourceX);
@@ -27,7 +24,7 @@ export class King implements Piece {
       this.color === PieceColor.WHITE ? targetY - sourceY : sourceY - targetY;
     if (Math.abs(deltaForward) <= 1 && deltaXAbs <= 1) {
       return boardState.canMoveStraightTo(
-        this.position,
+        sourcePosition,
         targetPosition,
         this.color
       );
@@ -35,11 +32,11 @@ export class King implements Piece {
     return false;
   }
 
-  updateValidMoves(boardState: BoardState): void {
+  getValidMoves(sourcePosition: Position, boardState: BoardState): Position[] {
     const validMoves: Position[] = [];
   
-    const sourceX: number = this.position.x;
-    const sourceY: number = this.position.y;
+    const sourceX: number = sourcePosition.x;
+    const sourceY: number = sourcePosition.y;
     const pieceColor: PieceColor = this.color;
 
     const steps = [-1, 0, 1];
@@ -55,12 +52,12 @@ export class King implements Piece {
           targetX < kGridSize &&
           targetY >= 0 &&
           targetY < kGridSize &&
-          !boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, pieceColor)
+          !boardState.tileIsOccupiedByColor({ x: targetX, y: targetY }, pieceColor)
         ) {
           validMoves.push({ x: targetX, y: targetY });
         }
       }
     }
-    this.validMoves = validMoves;
+    return validMoves;
   }
 }

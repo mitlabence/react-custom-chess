@@ -3,9 +3,10 @@ import { BoardState } from "./models/BoardState";
 import { King } from "./models/pieces/King";
 import { Knight } from "./models/pieces/Knight";
 import { Pawn } from "./models/pieces/Pawn";
-import { Piece } from "./models/pieces/Piece";
+import { ChessPiece } from "./models/pieces/ChessPiece";
 import { Queen } from "./models/pieces/Queen";
 import { Rook } from "./models/pieces/Rook";
+import { NullPiece } from "./models/pieces/NullPiece";
 
 export const kVerticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
 export const kHorizontalAxis = ["a", "b", "c", "d", "e", "f", "g", "h"];
@@ -25,6 +26,7 @@ export enum PieceType {
 export enum PieceColor {
   WHITE = "white",
   BLACK = "black",
+  NULL = "null",
 }
 
 export interface Position {
@@ -75,24 +77,45 @@ export const kPiecesConfig = [
   Rook,
 ]; // TODO: can make it more compact than specifying basically same information twice? piecesConfig and pieceTypesConfig
 
-export const kInitialPieces: Piece[] = [];
-for (let i = 0; i < 8; i++) {
-  // white
-  kInitialPieces.push(new kPiecesConfig[i]({ x: i, y: 0 }, PieceColor.WHITE));
-  kInitialPieces.push(new kPawnsConfig[i]({ x: i, y: 1 }, PieceColor.WHITE));
-  // black
-  kInitialPieces.push(new kPiecesConfig[i]({ x: i, y: 7 }, PieceColor.BLACK));
-  kInitialPieces.push(new kPawnsConfig[i]({ x: i, y: 6 }, PieceColor.BLACK));
-}
+// [[row_1], ..., [row_last]] 
+export const kInitialPieces: ChessPiece[][] = new Array(kGridSize)
+  .fill(null)
+  .map((_, rowIndex) => {
+    if (rowIndex === 0) {
+      /// white pieces
+      return kPawnsConfig.map(
+        (value, index, _) => new kPiecesConfig[index](PieceColor.WHITE)
+      );
+    } else if (rowIndex === 1) {
+      /// white pawns
+      return kPawnsConfig.map(
+        (value, index, _) => new kPawnsConfig[index](PieceColor.WHITE)
+      );
+    } else if (rowIndex === kGridSize - 2) {
+      /// black pawns
+      return kPawnsConfig.map(
+        (value, index, _) => new kPawnsConfig[index](PieceColor.BLACK)
+      );
+    } else if (rowIndex === kGridSize - 1) {
+      /// black pieces
+      return kPawnsConfig.map(
+        (value, index, _) => new kPiecesConfig[index](PieceColor.BLACK)
+      );
+    } else {
+      return new Array(kGridSize).fill(new NullPiece());
+    }
+  });
 
-
-export const kInitialBoardState = new BoardState(kInitialPieces, kInitialMoveHistory);
+export const kInitialBoardState = new BoardState(
+  kInitialPieces,
+  kInitialMoveHistory
+);
 
 export const kPieceTypeMap = {
-  "pawn" : Pawn,
-  "rook" : Rook,
-  "knight" : Knight,
-  "bishop" : Bishop,
-  "queen" : Queen,
-  "king" : King
+  pawn: Pawn,
+  rook: Rook,
+  knight: Knight,
+  bishop: Bishop,
+  queen: Queen,
+  king: King,
 };

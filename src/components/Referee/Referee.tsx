@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   kInitialPieces,
   Position,
@@ -6,42 +6,41 @@ import {
   PieceType,
   PieceColor,
   ChessMove,
-  equalsPosition,
   kGridSize,
   kPieceTypeMap,
 } from "../../Constants";
 
-import { Piece } from "../../models/pieces/Piece";
+import { ChessPiece } from "../../models/pieces/ChessPiece";
 import Chessboard from "../Chessboard/Chessboard";
 import { BoardState } from "../../models/BoardState";
+import { Pawn } from "../../models/pieces/Pawn";
+import { NullPiece } from "../../models/pieces/NullPiece";
 
 export default function Referee() {
   const [boardState, setBoardState] = useState<BoardState>(
     new BoardState(kInitialPieces, kInitialMoveHistory)
   );
-  const [promotionPawn, setPromotionPawn] = useState<Piece>();
+  const [promotionPawn, setPromotionPawn] = useState<ChessPiece>();
 
   const modalRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setBoardState((currBoardState) => getPossibleMoves(currBoardState));
-  }, []);
-
-  function promotePawn(pieceType: PieceType) {
-    if (promotionPawn === undefined) return;
-    const updatedPieces = boardState.pieces.reduce((results, piece) => {
-      if (equalsPosition(piece.position, promotionPawn.position)) {
+  function promotePawn(pieceType: PieceType): void {
+    if (promotionPawn === undefined || boardState.moveHistory.length < 1)
+      return;
+    const lastMove = boardState.moveHistory[boardState.moveHistory.length - 1];
+    const updatedPieces = boardState.piecesGrid.map((row, rowIndex) => {
+      if (rowIndex === lastMove.targetY) {
         // Found promoted piece
         const transformedPiece = new kPieceTypeMap[pieceType](
-          promotionPawn.position,
-          promotionPawn.color
+          promotionPawn.color!
         );
-        results.push(transformedPiece);
+        return row.map((p, colIndex) =>
+          colIndex === lastMove.targetX ? transformedPiece : p
+        );
       } else {
-        results.push(piece);
+        return row;
       }
-      return results;
-    }, [] as Piece[]);
+    });
     // Update pieces and move history
     // TODO: add promotion somehow to move history?
     //setBoardState(newBoardState);
@@ -50,32 +49,35 @@ export default function Referee() {
         new BoardState(updatedPieces, currBoardState.moveHistory)
     );
     // Update possible moves for new board state
-    setBoardState((currBoardState) => getPossibleMoves(currBoardState));
     modalRef.current?.classList.add("hidden");
   }
 
-  function getPossibleMoves(currentBoardState: BoardState) {
-    currentBoardState.updatePossibleMoves();
-    const updatedBoardState = new BoardState(
-      currentBoardState.pieces,
-      currentBoardState.moveHistory
-    );
-    return updatedBoardState;
-  }
-  function playMove(playedPiece: Piece, targetPosition: Position): boolean {
-    const validMove = isVaLidMove(playedPiece, targetPosition);
+  function playMove(
+    playedPiece: ChessPiece,
+    sourcePosition: Position,
+    targetPosition: Position
+  ): boolean {
+    if (playedPiece instanceof NullPiece) {
+      // if piece type is not defined (NullPiece), return false
+      return false;
+    }
+    const validMove = isValidMove(playedPiece, sourcePosition, targetPosition);
 
-    const isEnPassantMove: boolean = boardState.moveIsEnPassant(
-      playedPiece.position,
-      targetPosition
-    );
+    const isEnPassantMove: boolean =
+      playedPiece instanceof Pawn
+        ? playedPiece.moveIsEnPassant(
+            sourcePosition,
+            targetPosition,
+            boardState
+          )
+        : false;
     if (validMove || isEnPassantMove) {
       // Add move to move history
       const newMove: ChessMove = new ChessMove(
-        playedPiece.type,
-        playedPiece.color,
-        playedPiece.position.x,
-        playedPiece.position.y,
+        playedPiece.type!,
+        playedPiece.color!,
+        sourcePosition.x,
+        sourcePosition.y,
         targetPosition.x,
         targetPosition.y
       );
@@ -94,6 +96,7 @@ export default function Referee() {
         // For en passant, the captured piece is actually not at the coordinates where the moved piece ends up,
         // but one behind
         captureY = captureY - forwardDirection;
+        console.log(captureY);
       } else if (
         playedPiece.type === PieceType.PAWN &&
         targetPosition.y === promotionRow
@@ -101,40 +104,37 @@ export default function Referee() {
         modalRef.current?.classList.remove("hidden");
         setPromotionPawn(playedPiece); // FIXME: change promotion pawn back to undefined once promotion is done
       }
-      const newPieces = boardState.pieces.reduce((results, piece) => {
-        if (
-          equalsPosition(playedPiece.position, piece.position) &&
-          piece.color === playedPiece.color
-        ) {
-          // if no deep copy of pieces were made, we would need piece.team === currentPiece.team as well
-          piece.position.x = targetPosition.x;
-          piece.position.y = targetPosition.y;
-          results.push(piece);
-        } else if (
-          !equalsPosition(piece.position, { x: captureX, y: captureY })
-        ) {
-          // move all pieces but the one attacked (which could be non-existent, so cannot check it explicitly)
-          results.push(piece);
-        }
-        return results;
-      }, [] as Piece[]);
-      // Update possible moves for new board state
-
+      const color = playedPiece.color;
+      const pieceType = playedPiece.type;
+      // 1. change piece at source position to NullPiece, as piece moved
+      // 2. change piece at target position to piece that was moved
+      // 3. if targetPosition != capturePosition (en passant): change piece at capture position to NullPiece, if a piece was captured
+      const newPieces = boardState.piecesGrid.map((row, rowIndex) => {
+        return row.map((piece, colIndex) => {
+          if (rowIndex === sourcePosition.y && colIndex === sourcePosition.x) { // 1.
+            return new NullPiece();
+          } else if (rowIndex === targetPosition.y && colIndex === targetPosition.x) {
+            return playedPiece;
+          } else if (rowIndex === captureY && colIndex === captureX) {
+            return new NullPiece();
+          } else {
+            return piece;
+          }
+        });
+      });
+      
       // Update pieces and move history
       setBoardState(
         (currBoardState) =>
           new BoardState(newPieces, [...currBoardState.moveHistory, newMove])
       );
-
-      setBoardState((currBoardState) => getPossibleMoves(currBoardState));
-      console.log(targetPosition);
     } else {
       return false;
     }
     return true;
   }
 
-  function isVaLidMove(movingPiece: Piece, targetPosition: Position): boolean {
+  function isValidMove(movingPiece: ChessPiece, sourcePosition: Position, targetPosition: Position): boolean {
     // This function has to stay in referee, as it will be used to check if correct player is playing, etc.
     if (
       targetPosition.x < 0 ||
@@ -145,7 +145,7 @@ export default function Referee() {
       // avoid pieces leaving the board
       return false;
     }
-    return movingPiece.isValidMove(targetPosition, boardState);
+    return movingPiece.isValidMove(sourcePosition, targetPosition, boardState);
   }
   return (
     <>

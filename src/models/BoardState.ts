@@ -1,94 +1,14 @@
-import {
-  ChessMove,
-  equalsPosition,
-  PieceColor,
-  PieceType,
-  Position,
-} from "../Constants";
-import { Piece } from "./pieces/Piece";
+import { ChessMove, PieceColor, Position } from "../Constants";
+import { NullPiece } from "./pieces/NullPiece";
+import { ChessPiece } from "./pieces/ChessPiece";
 
 export class BoardState {
-  pieces: Piece[];
+  piecesGrid: ChessPiece[][]; // an array of the chess board rows; i.e. piecesGrid[0] is the first row!
   moveHistory: ChessMove[];
-  constructor(pieces: Piece[], moveHistory: ChessMove[]) {
-    this.pieces = pieces;
+  constructor(pieces: ChessPiece[][], moveHistory: ChessMove[]) {
+    this.piecesGrid = pieces;
     this.moveHistory = moveHistory;
   }
-
-  updatePossibleMoves(): void {
-    for (const piece of this.pieces) {
-      piece.updateValidMoves(this);
-    }
-  }
-
-  moveIsEnPassant(sourcePosition: Position, targetPosition: Position): boolean {
-    // find the moving piece
-    const movingPiece: Piece | undefined = this.pieces.find(
-      (p) =>
-        p.position.x === sourcePosition.x && p.position.y === sourcePosition.y
-    );
-    if (!movingPiece) {
-      return false;
-    }
-    const movingPieceType: PieceType = movingPiece.type;
-    const movingPieceColor: PieceColor = movingPiece.color;
-
-    // Given a source and target (x, y) coordinate, check if the
-    // piece with pieceType and pieceColor is making a move that is a legal en passant capture.
-    if (movingPieceType !== PieceType.PAWN) {
-      // only a pawn can en passant capture
-      return false;
-    }
-    // moveHistory should not be empty (en passant depends on previous move)
-    if (this.moveHistory.length < 1) {
-      return false;
-    }
-    const sourceX: number = sourcePosition.x;
-    const sourceY: number = sourcePosition.y;
-    const targetX: number = targetPosition.x;
-    const targetY: number = targetPosition.y;
-
-    // The number of horizontal moves
-    const deltaX = Math.abs(targetX - sourceX);
-    // forward is dependent on color! Should be positive if moving forward, negative if backward
-    const deltaForward =
-      movingPieceColor === PieceColor.WHITE
-        ? targetY - sourceY
-        : sourceY - targetY;
-    if (!(deltaX === 1 && deltaForward === 1)) {
-      // Pawn capture move => has to have 1 unit horizontal movement and 1 unit forward
-      return false;
-    }
-
-    // Up to this point, we made sure that a pawn makes a capture-like movement. Need to check:
-    // 1. if there is a pawn P at (targetX, sourceY). This pawn would be captured.
-    // 2. if the P has opposite color
-    const pieceToCapture = this.pieces.find(
-      (p) =>
-        p.position.x === targetX &&
-        p.position.y === sourceY &&
-        p.color !== movingPieceColor
-    );
-    if (!pieceToCapture || pieceToCapture.type !== PieceType.PAWN) {
-      // No piece to be captured is found or found piece is not a pawn
-      return false;
-    }
-    // 3. if the pawn P just made a first move of double squares.
-    //  It is enough to show that the previous move (two moves forward by P) ends up at same Y where attacking pawn is originally,
-    //  and the x of P is where the attacking pawn ends up
-    const previousMove = this.moveHistory[this.moveHistory.length - 1];
-    if (
-      !(previousMove.targetY === sourceY && previousMove.sourceX === targetX)
-    ) {
-      return false;
-    }
-    // 4. if we end up on third rank of enemy. Equivalent: if P has just moved 2 along Y axis.
-    if (!(Math.abs(previousMove.targetY - previousMove.sourceY) === 2)) {
-      return false;
-    }
-    return true;
-  }
-
   straightPathOccupied(
     sourcePosition: Position,
     targetPosition: Position,
@@ -123,12 +43,9 @@ export class BoardState {
       if (deltaY !== 0) {
         pathY += i * verticalStep;
       }
-      const pathPosition: Position = { x: pathX, y: pathY };
       // Check if a piece is on the tile, color does not matter
-      const piece = this.pieces.find((p) =>
-        equalsPosition(p.position, pathPosition)
-      );
-      if (piece) {
+      const piece = this.piecesGrid[pathY][pathX];
+      if (piece && !(piece instanceof NullPiece)) {
         // found such a piece
         return true;
       }
@@ -138,23 +55,17 @@ export class BoardState {
   }
 
   tileIsOccupied(position: Position): boolean {
-    const piece = this.pieces.find((p) => equalsPosition(p.position, position));
-    if (piece) {
-      return true;
-    } else {
+    const piece = this.piecesGrid[position.y][position.x];
+    if (piece instanceof NullPiece) {
       return false;
+    } else {
+      return true;
     }
   }
-  tileIsOccupiedBy(position: Position, color: PieceColor): boolean {
+  tileIsOccupiedByColor(position: Position, color: PieceColor): boolean {
     /// Given a color (team), check if (x,y) is occupied by a piece that belongs to that color.
-    const piece = this.pieces.find(
-      (p) => equalsPosition(p.position, position) && p.color === color
-    );
-    if (piece) {
-      return true;
-    } else {
-      return false;
-    }
+    const piece = this.piecesGrid[position.y][position.x];
+    return piece.color === color;
   }
 
   canMoveStraightTo(
@@ -170,7 +81,7 @@ export class BoardState {
       return false;
     }
     // 2. Check if target field is occupied by own color piece; otherwise, valid move.
-    if (this.tileIsOccupiedBy(targetPosition, ownColor)) {
+    if (this.tileIsOccupiedByColor(targetPosition, ownColor)) {
       return false;
     }
     return true;

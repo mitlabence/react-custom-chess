@@ -4,26 +4,23 @@ import {
   PieceType,
   Position,
 } from "../../Constants";
-import { Piece } from "./Piece";
+import { ChessPiece } from "./ChessPiece";
 import { BoardState } from "../BoardState";
 
-export class Knight implements Piece {
+export class Knight implements ChessPiece {
   image: string;
-  position: Position;
   type: PieceType;
   color: PieceColor;
-  validMoves: Position[] = [];
   checkable: boolean = false;
-  constructor(position: Position, color: PieceColor) {
+  constructor(color: PieceColor) {
     this.image = `assets/images/${color}_knight.png`;
-    this.position = position;
     this.type = PieceType.KNIGHT;
     this.color = color;
   }
 
-  isValidMove(targetPosition: Position, boardState: BoardState): boolean {
-    const sourceX: number = this.position.x;
-    const sourceY: number = this.position.y;
+  isValidMove(sourcePosition: Position, targetPosition: Position, boardState: BoardState): boolean {
+    const sourceX: number = sourcePosition.x;
+    const sourceY: number = sourcePosition.y;
     const targetX: number = targetPosition.x;
     const targetY: number = targetPosition.y;
     const deltaXAbs = Math.abs(targetX - sourceX);
@@ -33,11 +30,12 @@ export class Knight implements Piece {
     const oppositeColor =
       this.color === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
     // Knight moves 2 vertically, 1 horiziontally, or vice versa.
+    console.log("knight isValidMove: ", sourcePosition.x, sourcePosition.y);
     if (
       (Math.abs(deltaForward) === 2 && deltaXAbs === 1) ||
       (Math.abs(deltaForward) === 1 && deltaXAbs === 2)
     ) {
-      if (boardState.tileIsOccupiedBy(targetPosition,  oppositeColor)) {
+      if (boardState.tileIsOccupiedByColor(targetPosition,  oppositeColor)) {
         return true;
       } else if (!boardState.tileIsOccupied(targetPosition)) {
         return true;
@@ -46,11 +44,11 @@ export class Knight implements Piece {
     return false;
   }
 
-  updateValidMoves(boardState: BoardState): void {
+  getValidMoves(sourcePosition: Position, boardState: BoardState): Position[] {
     const validMoves: Position[] = [];
 
-    const sourceX: number = this.position.x;
-    const sourceY: number = this.position.y;
+    const sourceX: number = sourcePosition.x;
+    const sourceY: number = sourcePosition.y;
 
     // 1. Go left/right 2 and up/down 1
     const shortSteps = [-1, 1];
@@ -65,7 +63,7 @@ export class Knight implements Piece {
         const targetY = sourceY + yStep;
         if (targetY >= 0 && targetY < kGridSize) {
           const targetPosition: Position = { x: targetX, y: targetY };
-          if (this.isValidMove(targetPosition, boardState)) {
+          if (this.isValidMove(sourcePosition, targetPosition, boardState)) {
             validMoves.push(targetPosition);
           }
         }
@@ -82,12 +80,12 @@ export class Knight implements Piece {
         const targetY = sourceY + yStep;
         if (targetY >= 0 && targetY < kGridSize) {
           const targetPosition: Position = { x: targetX, y: targetY };
-          if (this.isValidMove(targetPosition, boardState)) {
+          if (this.isValidMove(sourcePosition, targetPosition, boardState)) {
             validMoves.push(targetPosition);
           }
         }
       }
     }
-    this.validMoves = validMoves;
+    return validMoves;
   }
 }

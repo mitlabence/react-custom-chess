@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import Tile from "../Tile/Tile";
 import "./Chessboard.css";
-import { Piece } from "../../models/pieces/Piece";
+import { ChessPiece } from "../../models/pieces/ChessPiece";
 
 import {
   Position,
@@ -14,14 +14,15 @@ import {
 import { BoardState } from "../../models/BoardState";
 
 interface Props {
-  playMove: (piece: Piece, targetPosition: Position) => boolean;
+  playMove: (
+    piece: ChessPiece,
+    sourcePosition: Position,
+    targetPosition: Position
+  ) => boolean;
   boardState: BoardState;
 }
 
-export default function Chessboard({
-  playMove,
-  boardState,
-}: Props) {
+export default function Chessboard({ playMove, boardState }: Props) {
   const [grabPosition, setGrabPosition] = useState<Position>({ x: -1, y: -1 });
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
   const chessBoardRef = useRef<HTMLDivElement>(null);
@@ -81,7 +82,6 @@ export default function Chessboard({
   }
 
   function dropPiece(e: React.MouseEvent) {
-    console.log(e);
     const chessboard = chessBoardRef.current;
     if (activePiece && chessboard) {
       const targetX = Math.floor(
@@ -93,14 +93,17 @@ export default function Chessboard({
       const targetPosition: Position = { x: targetX, y: targetY };
       // Check if move is valid
 
-      const currentPiece = boardState.pieces.find((p) =>
-        equalsPosition(p.position, grabPosition)
-      );
+      const currentPiece =
+        boardState.piecesGrid[grabPosition.y][grabPosition.x];
       //const attackedPiece = pieces.find((p) => p.x === x && p.y === y);
 
       // Update piece positions
       if (currentPiece) {
-        var moveSuccessful = playMove(currentPiece, targetPosition);
+        var moveSuccessful = playMove(
+          currentPiece,
+          grabPosition,
+          targetPosition
+        );
         if (!moveSuccessful) {
           // reset piece location
           activePiece.style.position = "relative";
@@ -111,24 +114,19 @@ export default function Chessboard({
       setActivePiece(null);
     }
   }
+  let grabbedPiece =
+    activePiece != null
+      ? boardState.piecesGrid[grabPosition.y][grabPosition.x]
+      : undefined;
+  const validMoves = grabbedPiece?.getValidMoves(grabPosition, boardState);
 
   for (let j = kVerticalAxis.length - 1; j >= 0; j--) {
     for (let i = 0; i < kHorizontalAxis.length; i++) {
       const number = j + i;
-      const piece = boardState.pieces.find((p) =>
-        equalsPosition(p.position, { x: i, y: j })
-      );
-      let image = piece ? piece.image : undefined;
-      let grabbedPiece =
-        activePiece != null
-          ? boardState.pieces.find((p) =>
-              equalsPosition(p.position, grabPosition)
-            )
-          : undefined;
-      let isHighlighted: boolean = grabbedPiece?.validMoves
-        ? grabbedPiece.validMoves.some((p) =>
-            equalsPosition(p, { x: i, y: j })
-          )
+      const piece = boardState.piecesGrid[j][i];
+      let image = piece && piece.image ? piece.image : undefined; // if NullPiece, set image to undefined as well
+      let isHighlighted: boolean = validMoves
+        ? validMoves.some((p) => equalsPosition(p, { x: i, y: j }))
         : false; // highlight the valid moves of grabbed piece
       board.push(
         <Tile

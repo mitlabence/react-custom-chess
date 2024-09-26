@@ -1,24 +1,21 @@
 import { kGridSize, PieceColor, PieceType, Position } from "../../Constants";
-import { Piece } from "./Piece";
+import { ChessPiece } from "./ChessPiece";
 import { BoardState } from "../BoardState";
 
-export class Bishop implements Piece {
+export class Bishop implements ChessPiece {
   image: string;
-  position: Position;
   type: PieceType;
   color: PieceColor;
-  validMoves: Position[] = [];
   checkable: boolean = false;
-  constructor(position: Position, color: PieceColor) {
+  constructor(color: PieceColor) {
     this.image = `assets/images/${color}_bishop.png`;
-    this.position = position;
     this.type = PieceType.BISHOP;
     this.color = color;
   }
 
-  isValidMove(targetPosition: Position, boardState: BoardState): boolean {
-    const sourceX: number = this.position.x;
-    const sourceY: number = this.position.y;
+  isValidMove(sourcePosition: Position, targetPosition: Position, boardState: BoardState): boolean {
+    const sourceX: number = sourcePosition.x;
+    const sourceY: number = sourcePosition.y;
     const targetX: number = targetPosition.x;
     const targetY: number = targetPosition.y;
     const deltaXAbs = Math.abs(targetX - sourceX);
@@ -34,17 +31,17 @@ export class Bishop implements Piece {
     }
 
     return boardState.canMoveStraightTo(
-      this.position,
+      sourcePosition,
       targetPosition,
       this.color
     );
   }
 
-  updateValidMoves(boardState: BoardState): void {
+  getValidMoves(sourcePosition: Position, boardState: BoardState): Position[] {
     const validMoves: Position[] = [];
 
-    const sourceX: number = this.position.x;
-    const sourceY: number = this.position.y;
+    const sourceX: number = sourcePosition.x;
+    const sourceY: number = sourcePosition.y;
     const pieceColor: PieceColor = this.color;
     const oppositeColor =
       pieceColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
@@ -61,11 +58,11 @@ export class Bishop implements Piece {
           targetX < kGridSize &&
           targetY >= 0 &&
           targetY < kGridSize &&
-          !boardState.tileIsOccupiedBy({ x: targetX, y: targetY }, pieceColor)
+          !boardState.tileIsOccupiedByColor({ x: targetX, y: targetY }, pieceColor)
         ) {
           validMoves.push({ x: targetX, y: targetY });
           if (
-            boardState.tileIsOccupiedBy(
+            boardState.tileIsOccupiedByColor(
               { x: targetX, y: targetY },
               oppositeColor
             )
@@ -78,6 +75,6 @@ export class Bishop implements Piece {
       }
     }
 
-    this.validMoves = validMoves;
+    return validMoves;
   }
 }
