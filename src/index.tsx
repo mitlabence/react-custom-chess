@@ -8,6 +8,7 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
+  // TODO: remove strictmode? (runs every setState twice)
   <React.StrictMode>
     <App />
   </React.StrictMode>
