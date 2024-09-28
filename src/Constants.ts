@@ -12,6 +12,7 @@ export const kVerticalAxis = ["1", "2", "3", "4", "5", "6", "7", "8"];
 export const kHorizontalAxis = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export const kTileSize = 100; // The side length of a chessboard tile in pixels
 export const kGridSize = 8; // the number of tiles along each axis of the chess board
+export const kKingX = 4; // king starts at e1 for white, e8 for black
 export const kInitialMoveHistory: ChessMove[] = [];
 
 export enum PieceType {

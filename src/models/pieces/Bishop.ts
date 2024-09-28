@@ -6,11 +6,12 @@ export class Bishop implements ChessPiece {
   image: string;
   type: PieceType;
   color: PieceColor;
-  checkable: boolean = false;
-  constructor(color: PieceColor) {
+  hasMoved?: boolean | undefined;
+  constructor(color: PieceColor, hasMoved?: boolean) {
     this.image = `assets/images/${color}_bishop.png`;
     this.type = PieceType.BISHOP;
     this.color = color;
+    this.hasMoved = hasMoved ? hasMoved : false;
   }
 
   isValidMove(sourcePosition: Position, targetPosition: Position, boardState: BoardState): boolean {
@@ -76,5 +77,8 @@ export class Bishop implements ChessPiece {
     }
 
     return validMoves;
+  }
+  isValidAttack(sourcePosition: Position, targetPosition: Position, boardState: BoardState) : boolean {
+    return this.isValidMove(sourcePosition, targetPosition, boardState);
   }
 }

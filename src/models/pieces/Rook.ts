@@ -6,11 +6,12 @@ export class Rook implements ChessPiece {
   image: string;
   type: PieceType;
   color: PieceColor;
-  checkable: boolean = false;
-  constructor(color: PieceColor) {
+  hasMoved?: boolean;
+  constructor(color: PieceColor, hasMoved?: boolean) {
     this.image = `assets/images/${color}_rook.png`;
     this.type = PieceType.ROOK;
     this.color = color;
+    this.hasMoved = hasMoved? hasMoved : false;
   }
 
   isValidMove(sourcePosition: Position, targetPosition: Position, boardState: BoardState): boolean {
@@ -86,5 +87,8 @@ export class Rook implements ChessPiece {
     }
   
     return validMoves;
+  }
+  isValidAttack(sourcePosition: Position, targetPosition: Position, boardState: BoardState) : boolean {
+    return this.isValidMove(sourcePosition, targetPosition, boardState);
   }
 }

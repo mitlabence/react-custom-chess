@@ -1,16 +1,17 @@
 import { kGridSize, PieceColor, PieceType, Position } from "../../Constants";
-import { ChessPiece } from "./ChessPiece";
 import { BoardState } from "../BoardState";
+import { PawnLike } from "./PawnLikePiece";
 
-export class Pawn implements ChessPiece {
+export class Pawn implements PawnLike {
   image: string;
   type: PieceType;
   color: PieceColor;
-  checkable: boolean = false;
-  constructor(color: PieceColor) {
+  hasMoved: boolean; // TODO: instead of checking if pawn on second rank of team, use hasMoved (more general)
+  constructor(color: PieceColor, hasMoved?: boolean) {
     this.image = `assets/images/${color}_pawn.png`;
     this.type = PieceType.PAWN;
     this.color = color;
+    this.hasMoved = hasMoved ? hasMoved : false;
   }
 
   isValidMove(
@@ -30,14 +31,8 @@ export class Pawn implements ChessPiece {
     const oppositeColor =
       pieceColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
     // First step can be 1 or 2 squares forward. White: source -> target is an increment, black: decrement
-    // For pawn, important to know if it is on second rank of its color (pawns can move 2 forward as first move)
-    const isOnStartingRank =
-      (pieceColor === PieceColor.WHITE && sourceY === 1) ||
-      (pieceColor === PieceColor.BLACK && sourceY === 6)
-        ? true
-        : false;
     // Check based on forward movement
-    if (deltaForward === 2 && deltaXAbs === 0 && isOnStartingRank) {
+    if (deltaForward === 2 && deltaXAbs === 0 && !this.hasMoved) {
       if (
         //this.tileIsOccupied(targetPosition, boardState) ||
         //this.tileIsOccupied(
@@ -84,12 +79,6 @@ export class Pawn implements ChessPiece {
     const oppositeColor =
       pieceColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
     // First step can be 1 or 2 squares forward. White: source -> target is an increment, black: decrement
-    // For pawn, important to know if it is on second rank of its color (pawns can move 2 forward as first move)
-    const isOnStartingRank =
-      (pieceColor === PieceColor.WHITE && sourceY === 1) ||
-      (pieceColor === PieceColor.BLACK && sourceY === 6)
-        ? true
-        : false;
     const forwardDirection = pieceColor === PieceColor.WHITE ? 1 : -1;
 
     const singleForwardMove = { x: sourceX, y: sourceY + forwardDirection };
@@ -101,17 +90,25 @@ export class Pawn implements ChessPiece {
     if (!boardState.tileIsOccupied(singleForwardMove)) {
       validMoves.push(singleForwardMove);
       // 2. Check if double step forward is possible. Only possible if the single step forward is possible (and pawn is on starting rank)
-      if (isOnStartingRank && !boardState.tileIsOccupied(doubleForwardMove)) {
+      if (!this.hasMoved && !boardState.tileIsOccupied(doubleForwardMove)) {
         validMoves.push(doubleForwardMove);
       }
     }
 
     // 3. Check if left/right diagonal attack is possible
-    if (leftAttackMove.x >= 0 && leftAttackMove.x < kGridSize  && boardState.tileIsOccupiedByColor(leftAttackMove, oppositeColor)) { 
+    if (
+      leftAttackMove.x >= 0 &&
+      leftAttackMove.x < kGridSize &&
+      boardState.tileIsOccupiedByColor(leftAttackMove, oppositeColor)
+    ) {
       // no need to check leftAttackMove.y as pawn never moves (changes type) after reaching last rank
       validMoves.push(leftAttackMove);
     }
-    if (rightAttackMove.x >= 0 && rightAttackMove.x < kGridSize && boardState.tileIsOccupiedByColor(rightAttackMove, oppositeColor)) {
+    if (
+      rightAttackMove.x >= 0 &&
+      rightAttackMove.x < kGridSize &&
+      boardState.tileIsOccupiedByColor(rightAttackMove, oppositeColor)
+    ) {
       validMoves.push(rightAttackMove);
     }
     // 4. En passant capture
@@ -152,11 +149,7 @@ export class Pawn implements ChessPiece {
     // 1. if there is a pawn P at (targetX, sourceY). This pawn would be captured.
     // 2. if the P has opposite color
     const pieceToCapture = boardState.piecesGrid[sourceY][targetX];
-    if (
-      !pieceToCapture ||
-      pieceToCapture.type !== PieceType.PAWN ||
-      pieceToCapture.type !== PieceType.PAWN
-    ) {
+    if (!pieceToCapture || pieceToCapture.type !== PieceType.PAWN) {
       // TODO: not only pawns should be enPassant capturable, but all pawn-like pieces
       // No piece to be captured is found or found piece is not a pawn
       return false;
@@ -176,5 +169,17 @@ export class Pawn implements ChessPiece {
       return false;
     }
     return true;
+  }
+  isValidAttack(
+    sourcePosition: Position,
+    targetPosition: Position,
+    boardState: BoardState
+  ): boolean {
+    const forwardDirection = this.color === PieceColor.WHITE ? 1 : -1;
+    //const oppositeColor = this.color === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+    const deltaX = Math.abs(targetPosition.x - sourcePosition.x);
+    const deltaY = targetPosition.y - sourcePosition.y;
+    const isVA = deltaX === 1 && deltaY === forwardDirection;
+    return isVA;
   }
 }

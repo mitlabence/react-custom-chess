@@ -1,12 +1,12 @@
-import { ChessMove, PieceColor, Position } from "../Constants";
+import { ChessMove, PieceColor, PieceType, Position } from "../Constants";
 import { NullPiece } from "./pieces/NullPiece";
 import { ChessPiece } from "./pieces/ChessPiece";
 
 export class BoardState {
   piecesGrid: ChessPiece[][]; // an array of the chess board rows; i.e. piecesGrid[0] is the first row!
   moveHistory: ChessMove[];
-  constructor(pieces: ChessPiece[][], moveHistory: ChessMove[]) {
-    this.piecesGrid = pieces;
+  constructor(piecesGrid: ChessPiece[][], moveHistory: ChessMove[]) {
+    this.piecesGrid = piecesGrid;
     this.moveHistory = moveHistory;
   }
   straightPathOccupied(
@@ -53,7 +53,21 @@ export class BoardState {
 
     return false;
   }
-
+  tileIsAttacked(position: Position, attackerColor: PieceColor): boolean {
+    // Check if the tile at (x,y) is attacked by any piece of the attackerColor.
+    let isAttacked = false;
+    // TODO: forEach cannot use break to exit early. Use for loop instead.
+    this.piecesGrid.forEach((row, y) => {
+      row.forEach((piece, x) => {
+        if (!isAttacked && piece.color === attackerColor) {
+          if (piece.isValidAttack({ x, y }, position, this)) {
+            isAttacked = true;
+          }
+        }
+      });
+    });
+    return isAttacked;
+  }
   tileIsOccupied(position: Position): boolean {
     const piece = this.piecesGrid[position.y][position.x];
     if (piece instanceof NullPiece) {
@@ -85,5 +99,39 @@ export class BoardState {
       return false;
     }
     return true;
+  }
+
+  cloneWithRelocation(sourcePosition: Position, targetPosition: Position): BoardState {
+    /// Simulate a move from sourcePosition to targetPosition, and return the new board state as a new object. Leaves the original BoardState object unchanged. The move is not checked for validity!
+    /// If trying to relocate a NullPiece, no move is added to the move history
+    const movedPiece: ChessPiece = this.piecesGrid[sourcePosition.y][sourcePosition.x];
+    const updatedPiecesGrid = this.piecesGrid.map((row, rowIndex) => {
+      return row.map((piece, colIndex) => {
+        if (rowIndex === sourcePosition.y && colIndex === sourcePosition.x) {
+          return new NullPiece();
+        } else if (rowIndex === targetPosition.y && colIndex === targetPosition.x) {
+          return movedPiece;
+        } else {
+          return piece;
+        }
+      });
+    });
+    if (movedPiece instanceof NullPiece) {
+      return new BoardState(updatedPiecesGrid, this.moveHistory);
+    }
+    else {
+      return new BoardState(updatedPiecesGrid, [...this.moveHistory, new ChessMove(movedPiece.type!, movedPiece.color!, sourcePosition.x, sourcePosition.y, targetPosition.x, targetPosition.y)]);
+    }
+  }
+  getKingPosition(color: PieceColor): Position | undefined{
+    let kingPosition: Position | undefined = undefined;
+    this.piecesGrid.forEach((row, y) => {
+      row.forEach((piece, x) => {
+        if (piece.color === color && piece.type === PieceType.KING) {
+          kingPosition = {x, y};
+        }
+      });
+    });
+    return kingPosition;
   }
 }

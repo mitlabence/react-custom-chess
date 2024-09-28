@@ -1,11 +1,12 @@
 import { Position } from "../../Constants";
+import { BoardState } from "../BoardState";
 import { ChessPiece } from "./ChessPiece";
 
 export class NullPiece implements ChessPiece{
     image = undefined;
     type = undefined;
     color = undefined;
-    checkable: boolean = false;
+    hasMoved = false;
     isValidMove(sourcePosition: Position, targetPosition: Position): boolean {
         return false;
     }
@@ -13,4 +14,7 @@ export class NullPiece implements ChessPiece{
     getValidMoves(): Position[] {
         return [];
     }
+    isValidAttack(sourcePosition: Position, targetPosition: Position, boardState: BoardState) : boolean {
+        return false;
+      }
 }
