@@ -17,12 +17,14 @@ interface Props {
   playMove: (
     piece: ChessPiece,
     sourcePosition: Position,
-    targetPosition: Position
+    targetPosition: Position,
+    
   ) => boolean;
   boardState: BoardState;
+  getValidMoves: (piece: ChessPiece, sourcePosition: Position) => Position[];
 }
 
-export default function Chessboard({ playMove, boardState }: Props) {
+export default function Chessboard({ playMove, boardState, getValidMoves }: Props) {
   const [grabPosition, setGrabPosition] = useState<Position>({ x: -1, y: -1 });
   const [activePiece, setActivePiece] = useState<HTMLElement | null>(null);
   const chessBoardRef = useRef<HTMLDivElement>(null);
@@ -118,7 +120,7 @@ export default function Chessboard({ playMove, boardState }: Props) {
     activePiece != null
       ? boardState.piecesGrid[grabPosition.y][grabPosition.x]
       : undefined;
-  const validMoves = grabbedPiece?.getValidMoves(grabPosition, boardState);
+  const validMoves =  grabbedPiece !== undefined ? getValidMoves(grabbedPiece, grabPosition) : [];
 
   for (let j = kVerticalAxis.length - 1; j >= 0; j--) {
     for (let i = 0; i < kHorizontalAxis.length; i++) {

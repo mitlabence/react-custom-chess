@@ -17,7 +17,6 @@ import { BoardState } from "../../models/BoardState";
 import { Pawn } from "../../models/pieces/Pawn";
 import { NullPiece } from "../../models/pieces/NullPiece";
 import { King } from "../../models/pieces/King";
-import { Rook } from "../../models/pieces/Rook";
 
 export default function Referee() {
   // TODO: update hasMoved for each piece, even pawns! Also promotion should result in a piece that has moved
@@ -251,7 +250,35 @@ export default function Referee() {
     setIsWhitesTurn(!isWhitesTurn);
     return true;
   }
-
+  function getValidMoves(
+    movingPiece: ChessPiece,
+    sourcePosition: Position
+  ): Position[] {
+    if (isWhitesTurn !== (movingPiece.color === PieceColor.WHITE)) {
+      return [];
+    }
+    // 1. Get valid moves according to the piece logic
+    const validMoves = movingPiece.getValidMoves(sourcePosition, boardState);
+    // 2. Filter out moves where afterwards the own king is in check
+    return validMoves.filter((move) => {
+      const simulatedBoardState: BoardState = boardState.cloneWithRelocation(
+        sourcePosition,
+        move
+      );
+      if (
+        simulatedBoardState.tileIsAttacked(
+          simulatedBoardState.getKingPosition(movingPiece.color!)!,
+          movingPiece.color === PieceColor.WHITE
+            ? PieceColor.BLACK
+            : PieceColor.WHITE
+        )
+      ) {
+        return false;
+      } else {
+        return true;
+      }
+    });
+  }
   function isValidMove(
     movingPiece: ChessPiece,
     sourcePosition: Position,
@@ -325,7 +352,11 @@ export default function Referee() {
           />
         </div>
       </div>
-      <Chessboard playMove={playMove} boardState={boardState} />
+      <Chessboard
+        playMove={playMove}
+        boardState={boardState}
+        getValidMoves={getValidMoves}
+      />
     </>
   );
 }
