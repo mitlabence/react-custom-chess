@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   kInitialPieces,
   Position,
@@ -24,10 +24,10 @@ export default function Referee() {
     new BoardState(kInitialPieces, kInitialMoveHistory)
   );
   const [promotionPawn, setPromotionPawn] = useState<ChessPiece>();
-  const [whiteKingIsChecked, setWhiteKingIsChecked] = useState<boolean>(false);
-  const [blackKingIsChecked, setBlackKingIsChecked] = useState<boolean>(false);
   const [isWhitesTurn, setIsWhitesTurn] = useState<boolean>(true);
+  let winningTeam: PieceColor | undefined = undefined;
   const modalRef = useRef<HTMLDivElement>(null);
+  const checkMateModalRef = useRef<HTMLDivElement>(null);
 
   function promotePawn(pieceType: PieceType): void {
     if (promotionPawn === undefined || boardState.moveHistory.length < 1)
@@ -56,6 +56,22 @@ export default function Referee() {
     // Update possible moves for new board state
     modalRef.current?.classList.add("hidden");
   }
+  function postMove(): void {
+    /// After the move is made, check if enemy king is put in check or checkmate
+    // Check if enemy king is in check
+    if (boardState.moveHistory.length < 1) return;
+    const moveColor =
+      boardState.moveHistory[boardState.moveHistory.length - 1].pieceColor;
+    const oppositeColor =
+      moveColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+    const opposingKingPosition = boardState.getKingPosition(oppositeColor);
+    if (opposingKingPosition === undefined) {
+      return; // Should not happen: every player should have a king. But if not, no need to check for check/mate
+    }
+    // Set turn to the other player
+    setIsWhitesTurn(!isWhitesTurn);
+  }
+
   function playMove(
     playedPiece: ChessPiece,
     sourcePosition: Position,
@@ -65,6 +81,10 @@ export default function Referee() {
       // if piece type is not defined (NullPiece), return false
       return false;
     }
+    const oppositeColor =
+      playedPiece.color === PieceColor.WHITE
+        ? PieceColor.BLACK
+        : PieceColor.WHITE;
     if ((playedPiece.color === PieceColor.BLACK) === isWhitesTurn) {
       // if it is not white's turn, return false
       return false;
@@ -111,85 +131,27 @@ export default function Referee() {
         // For en passant, the captured piece is actually not at the coordinates where the moved piece ends up,
         // but one behind
         captureY = captureY - forwardDirection;
-        console.log(captureY);
       } else if (isPromotionMove) {
         modalRef.current?.classList.remove("hidden");
         setPromotionPawn(playedPiece); // FIXME: change promotion pawn back to undefined once promotion is done
       } else if (isCastlingMove) {
         // Castling move: move corner piece to the other side of the king
-        console.log("Castling move");
-        const cornerPieceX = targetPosition.x > kKingX ? kGridSize - 1 : 0;
-        const cornerPieceY = targetPosition.y;
-        const cornerPieceType: PieceType =
-          boardState.piecesGrid[cornerPieceY][cornerPieceX].type!; // already checked for type in moveIsCastling
-        const rookTargetX =
+        // sourceX and sourceY of corner piece
+        var cornerPieceSourceX = targetPosition.x > kKingX ? kGridSize - 1 : 0;
+        var cornerPieceSourceY = targetPosition.y;
+        var cornerPieceType: PieceType =
+          boardState.piecesGrid[cornerPieceSourceY][cornerPieceSourceX].type!; // already checked for type in moveIsCastling
+        // targetX of corner piece (targetY is cornerPieceY)
+        var cornerPieceTargetX =
           targetPosition.x > kKingX
             ? targetPosition.x - 1
             : targetPosition.x + 1;
-        const newBoardState = boardState.piecesGrid.map((row, rowIndex) => {
-          if (rowIndex === cornerPieceY) {
-            return row.map((piece, colIndex) => {
-              if (colIndex === cornerPieceX) {
-                // remove corner piece from old position
-                return new NullPiece();
-              } else if (colIndex === rookTargetX) {
-                // add corner piece to new position
-                return new kPieceTypeMap[cornerPieceType](playedPiece.color!);
-              } else if (colIndex === sourcePosition.x) {
-                // remove king from starting position
-                return new NullPiece();
-              } else if (colIndex === targetPosition.x) {
-                // add king to target position
-                return playedPiece;
-              } else {
-                return piece;
-              }
-            });
-          } else {
-            return row;
-          }
-        });
-        setBoardState(
-          (currBoardState) =>
-            new BoardState(newBoardState, [
-              ...currBoardState.moveHistory,
-              newMove,
-            ])
-        );
-        // Check if enemy king is in check
-        const oppositeColor =
-          playedPiece.color === PieceColor.WHITE
-            ? PieceColor.BLACK
-            : PieceColor.WHITE;
-        const opposingKingPosition = boardState.getKingPosition(oppositeColor);
-        if (opposingKingPosition === undefined) {
-          return false; // Should not happen: every player should have a king
-        }
-        // TODO: setBoardState finished?
-        const isOpposingKingChecked = boardState.tileIsAttacked(
-          opposingKingPosition,
-          oppositeColor
-        );
-        if (isOpposingKingChecked) {
-          if (playedPiece.color === PieceColor.WHITE) {
-            setBlackKingIsChecked(true);
-          } else {
-            setWhiteKingIsChecked(true);
-          }
-        }
-        // A valid move should also set the king to not be in check
-        if (playedPiece.color === PieceColor.WHITE) {
-          setWhiteKingIsChecked(false);
-        } else {
-          setBlackKingIsChecked(false);
-        }
-        // Set turn to the other player
-        setIsWhitesTurn(!isWhitesTurn);
-        return true;
+        var cornerPieceTargetY = cornerPieceSourceY;
       }
       // 1. change piece at source position to NullPiece, as piece moved
       // 2. change piece at target position to piece that was moved
       // 3. if targetPosition != capturePosition (en passant): change piece at capture position to NullPiece, if a piece was captured
+      // 4. if castling move: move corner piece to the other side of the king
       const newPieces = boardState.piecesGrid.map((row, rowIndex) => {
         return row.map((piece, colIndex) => {
           if (rowIndex === sourcePosition.y && colIndex === sourcePosition.x) {
@@ -205,51 +167,123 @@ export default function Referee() {
             ); // create same piece type as playedPiece but with hasMoved=true
           } else if (rowIndex === captureY && colIndex === captureX) {
             return new NullPiece();
+          } else if (
+            isCastlingMove &&
+            colIndex === cornerPieceSourceX &&
+            rowIndex === cornerPieceSourceY
+          ) {
+            return new NullPiece();
+          } else if (
+            isCastlingMove &&
+            colIndex === cornerPieceTargetX &&
+            rowIndex === cornerPieceTargetY
+          ) {
+            return new kPieceTypeMap[cornerPieceType](playedPiece.color!, true); // corner piece "has moved" (hasMoved=true)
           } else {
             return piece;
           }
         });
       });
+      const updatedBoardState = new BoardState(newPieces, [
+        ...boardState.moveHistory,
+        newMove,
+      ]);
+      // Update pieces and move history for next render
+      setBoardState(updatedBoardState);
 
-      // Update pieces and move history
-      setBoardState(
-        (currBoardState) =>
-          new BoardState(newPieces, [...currBoardState.moveHistory, newMove])
-      );
+      // Set turn to the other player
+      setIsWhitesTurn(!isWhitesTurn);
+
+      // Handle checkmate: check if opposite king is in checkmate
+      if (
+        isCheckMate(
+          updatedBoardState.getKingPosition(oppositeColor)!,
+          updatedBoardState
+        )
+      ) {
+        winningTeam = playedPiece.color;
+        checkMateModalRef.current?.classList.remove("hidden");
+      }
+      return true;
     } else {
+      // invalid move/enpassant move
       return false;
     }
-    // Check if enemy king is in check
-    const oppositeColor =
-      playedPiece.color === PieceColor.WHITE
-        ? PieceColor.BLACK
-        : PieceColor.WHITE;
-    const opposingKingPosition = boardState.getKingPosition(oppositeColor);
-    if (opposingKingPosition === undefined) {
-      return false; // Should not happen: every player should have a king
-    }
-    // TODO: setBoardState finished?
-    const isOpposingKingChecked = boardState.tileIsAttacked(
-      opposingKingPosition,
-      oppositeColor
-    );
-    if (isOpposingKingChecked) {
-      if (playedPiece.color === PieceColor.WHITE) {
-        setBlackKingIsChecked(true);
-      } else {
-        setWhiteKingIsChecked(true);
-      }
-    }
-    // A valid move should also set the king to not be in check
-    if (playedPiece.color === PieceColor.WHITE) {
-      setWhiteKingIsChecked(false);
-    } else {
-      setBlackKingIsChecked(false);
-    }
-    // Set turn to the other player
-    setIsWhitesTurn(!isWhitesTurn);
-    return true;
   }
+
+  function isCheckMate(
+    kingPosition: Position,
+    boardStateAfterMove: BoardState
+  ) {
+    /// Check if last move in boardState.moveHistory resulted in checkmate
+    if (boardStateAfterMove.moveHistory.length < 1) return false;
+    const kingColor: PieceColor =
+      boardStateAfterMove.piecesGrid[kingPosition.y][kingPosition.x].color!;
+    const attackerColor: PieceColor =
+      kingColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+    const isKingChecked = boardStateAfterMove.tileIsAttacked(
+      kingPosition,
+      attackerColor
+    );
+    if (!isKingChecked) {
+      return false;
+    } else {
+      // For all pieces on checked piece's team, check if there is a valid move
+      const validMoveExists: boolean = boardStateAfterMove.piecesGrid.reduce(
+        (thereIsValidMoveInRow, row, rowIndex) => {
+          return (
+            thereIsValidMoveInRow ||
+            row.reduce((thereIsValidMove, piece, colIndex) => {
+              if (piece.color === kingColor) {
+                return (
+                  thereIsValidMove ||
+                  filterValidMoves(
+                    { x: colIndex, y: rowIndex },
+                    piece.getValidMoves(
+                      { x: colIndex, y: rowIndex },
+                      boardStateAfterMove
+                    ),
+                    boardStateAfterMove
+                  ).length > 0
+                );
+              } else {
+                return thereIsValidMove || false; // no valid moves from nullpiece or piece of other color
+              }
+            }, false)
+          );
+        },
+        false
+      );
+      return !validMoveExists; // check mate if no valid move exists
+    }
+  }
+  function filterValidMoves(
+    sourcePosition: Position,
+    validMoves: Position[],
+    boardState: BoardState
+  ): Position[] {
+    const movingPieceColor =
+      boardState.piecesGrid[sourcePosition.y][sourcePosition.x].color!;
+    return validMoves.filter((move) => {
+      const simulatedBoardState: BoardState = boardState.cloneWithRelocation(
+        sourcePosition,
+        move
+      );
+      if (
+        simulatedBoardState.tileIsAttacked(
+          simulatedBoardState.getKingPosition(movingPieceColor!)!,
+          movingPieceColor === PieceColor.WHITE
+            ? PieceColor.BLACK
+            : PieceColor.WHITE
+        )
+      ) {
+        return false;
+      } else {
+        return true;
+      }
+    });
+  }
+
   function getValidMoves(
     movingPiece: ChessPiece,
     sourcePosition: Position
@@ -260,24 +294,7 @@ export default function Referee() {
     // 1. Get valid moves according to the piece logic
     const validMoves = movingPiece.getValidMoves(sourcePosition, boardState);
     // 2. Filter out moves where afterwards the own king is in check
-    return validMoves.filter((move) => {
-      const simulatedBoardState: BoardState = boardState.cloneWithRelocation(
-        sourcePosition,
-        move
-      );
-      if (
-        simulatedBoardState.tileIsAttacked(
-          simulatedBoardState.getKingPosition(movingPiece.color!)!,
-          movingPiece.color === PieceColor.WHITE
-            ? PieceColor.BLACK
-            : PieceColor.WHITE
-        )
-      ) {
-        return false;
-      } else {
-        return true;
-      }
-    });
+    return filterValidMoves(sourcePosition, validMoves, boardState);
   }
   function isValidMove(
     movingPiece: ChessPiece,
@@ -328,7 +345,7 @@ export default function Referee() {
   }
   return (
     <>
-      <div id="pawn-promotion-modal" className="hidden" ref={modalRef}>
+      <div className="modal hidden" ref={modalRef}>
         <div className="modal-body">
           <img
             alt="Q"
@@ -350,6 +367,14 @@ export default function Referee() {
             onClick={() => promotePawn(PieceType.KNIGHT)}
             src={`assets/images/${promotionPawn?.color}_knight.png`}
           />
+        </div>
+      </div>
+      <div className="modal hidden" ref={checkMateModalRef}>
+        <div className="modal-body">
+          <div className="checkmate-body">
+            <span>The winning team is {winningTeam}!</span>
+            <button>Play again</button>
+          </div>
         </div>
       </div>
       <Chessboard
