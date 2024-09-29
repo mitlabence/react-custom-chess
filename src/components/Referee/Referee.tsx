@@ -25,7 +25,9 @@ export default function Referee() {
   );
   const [promotionPawn, setPromotionPawn] = useState<ChessPiece>();
   const [isWhitesTurn, setIsWhitesTurn] = useState<boolean>(true);
-  let winningTeam: PieceColor | undefined = undefined;
+  const [winningTeam, setWinningTeam] = useState<PieceColor | undefined>(
+    undefined
+  );
   const modalRef = useRef<HTMLDivElement>(null);
   const checkMateModalRef = useRef<HTMLDivElement>(null);
 
@@ -201,7 +203,7 @@ export default function Referee() {
           updatedBoardState
         )
       ) {
-        winningTeam = playedPiece.color;
+        setWinningTeam(playedPiece.color);
         checkMateModalRef.current?.classList.remove("hidden");
       }
       return true;
@@ -347,6 +349,12 @@ export default function Referee() {
     }
     return true;
   }
+  function restartGame() {
+    checkMateModalRef.current?.classList.add("hidden");
+    setBoardState(new BoardState(kInitialPieces, kInitialMoveHistory));
+    setIsWhitesTurn(true);
+    setPromotionPawn(undefined);
+  }
   return (
     <>
       <div className="modal hidden" ref={modalRef}>
@@ -377,7 +385,7 @@ export default function Referee() {
         <div className="modal-body">
           <div className="checkmate-body">
             <span>The winning team is {winningTeam}!</span>
-            <button>Play again</button>
+            <button onClick={restartGame}>Play again</button>
           </div>
         </div>
       </div>
