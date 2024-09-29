@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   kInitialPieces,
   Position,
@@ -262,6 +262,10 @@ export default function Referee() {
     validMoves: Position[],
     boardState: BoardState
   ): Position[] {
+    validMoves.forEach((move) => {
+      const piece = boardState.piecesGrid[sourcePosition.y][sourcePosition.x];
+      console.log(piece, move);
+    });
     const movingPieceColor =
       boardState.piecesGrid[sourcePosition.y][sourcePosition.x].color!;
     return validMoves.filter((move) => {
